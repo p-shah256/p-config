@@ -1,3 +1,10 @@
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 
@@ -8,8 +15,16 @@ export ZSH="$HOME/.oh-my-zsh"
 # load a random theme each time Oh My Zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-# ZSH_THEME="robbyrussell"
-ZSH_THEME="agnoster"
+ZSH_THEME="powerlevel10k/powerlevel10k"
+POWERLEVEL9K_DISABLE_GITSTATUS=true
+POWERLEVEL10K_DISABLE_GITSTATUS=true
+export BAT_THEME="GitHub"
+
+[ -f ~/.zshrc.meta ] && source ~/.zshrc.meta
+
+phead() {
+    echo -e "\n\n\033[1;36m=== $* ===\033[0m"
+}
 
 # Set list of themes to pick from when loading at random
 # Setting this variable when ZSH_THEME=random will cause zsh to load
@@ -48,12 +63,12 @@ ENABLE_CORRECTION="true"
 # You can also set it to another string to have that shown instead of the default red dots.
 # e.g. COMPLETION_WAITING_DOTS="%F{yellow}waiting...%f"
 # Caution: this setting can cause issues with multiline prompts in zsh < 5.7.1 (see #5765)
-COMPLETION_WAITING_DOTS="true"
+# COMPLETION_WAITING_DOTS="true"
 
 # Uncomment the following line if you want to disable marking untracked files
 # under VCS as dirty. This makes repository status check for large repositories
 # much, much faster.
-DISABLE_UNTRACKED_FILES_DIRTY="true"
+# DISABLE_UNTRACKED_FILES_DIRTY="true"
 
 # Uncomment the following line if you want to change the command execution time
 # stamp shown in the history command output.
@@ -61,7 +76,7 @@ DISABLE_UNTRACKED_FILES_DIRTY="true"
 # "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
 # or set a custom format using the strftime function format specifications,
 # see 'man strftime' for details.
-HIST_STAMPS="mm/dd/yyyy"
+# HIST_STAMPS="mm/dd/yyyy"
 
 # Would you like to use another custom folder than $ZSH/custom?
 # ZSH_CUSTOM=/path/to/new-custom-folder
@@ -71,9 +86,10 @@ HIST_STAMPS="mm/dd/yyyy"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
 
+plugins=(z zsh-syntax-highlighting zsh-autosuggestions zsh-completions)
 source $ZSH/oh-my-zsh.sh
+
 
 # User configuration
 
@@ -83,11 +99,18 @@ source $ZSH/oh-my-zsh.sh
 # export LANG=en_US.UTF-8
 
 # Preferred editor for local and remote sessions
-# if [[ -n $SSH_CONNECTION ]]; then
-#   export EDITOR='vim'
-# else
-#   export EDITOR='nvim'
-# fi
+export EDITOR="nvim"
+export VISUAL="nvim"
+export TERM=xterm-256color
+export PATH="$PATH:/home/shah256/.cargo/bin"
+bindkey -v
+
+# Enable editing command line in editor
+autoload -U edit-command-line
+zle -N edit-command-line
+bindkey -M viins '^x^e' edit-command-line  # Ctrl+X Ctrl+E in insert mode
+bindkey -M vicmd 'V' edit-command-line     # V in normal mode
+bindkey -M vicmd 'v' visual-mode           # v enters visual mode
 
 # Compilation flags
 # export ARCHFLAGS="-arch $(uname -m)"
@@ -101,29 +124,19 @@ source $ZSH/oh-my-zsh.sh
 # For a full list of active aliases, run `alias`.
 #
 # Example aliases
-alias ls="lsd"
-alias la="lsd -la"
+# alias zshconfig="mate ~/.zshrc"
+# alias ohmyzsh="mate ~/.oh-my-zsh"
+alias ls='eza --icons --group-directories-first'
 
 
-
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-autoload -U compinit && compinit
 
 
-export EDITOR=vim
-export PATH="$HOME/go/bin:$PATH"
+source <(navi widget zsh)
 
-export SSH_AUTH_SOCK=~/.ssh/ssh-agent.sock
-if [[ ! -d ~/.ssh ]]; then
-  mkdir -p ~/.ssh
-fi
+# Load atuin into PATH before using it
+. "$HOME/.atuin/bin/env"
 
-
-# More robust agent check and startup
-if ! ps -ef | grep -v grep | grep ssh-agent > /dev/null; then
-  rm -f $SSH_AUTH_SOCK
-  eval $(ssh-agent -s -a $SSH_AUTH_SOCK)
-elif [[ ! -S "$SSH_AUTH_SOCK" ]]; then
-  rm -f $SSH_AUTH_SOCK
-  eval $(ssh-agent -s -a $SSH_AUTH_SOCK)
-fi
+eval "$(atuin init zsh)"
