@@ -5,6 +5,9 @@
 --
 --]]
 
+-- Disabled from lazy.nvim plugin loading - to enable, remove line below
+do return {} end
+
 local check_version = function()
   local verstr = tostring(vim.version())
   if not vim.version.ge then
