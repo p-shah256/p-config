@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(test:*)",
+      "Bash(git push:*)",
+      "Bash(dotsync --help:*)",
+      "Bash(nvim:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
