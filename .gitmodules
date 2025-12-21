@@ -1,0 +1,3 @@
+[submodule "nvim/forks/diffview.nvim"]
+	path = nvim/forks/diffview.nvim
+	url = git@github.com:p-shah256/diffview.nvim.git
