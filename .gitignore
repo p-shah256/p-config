@@ -7,3 +7,4 @@ foo.*
 *.log
 data
 nvim/lua/plugins/meta.lua
+.claude
