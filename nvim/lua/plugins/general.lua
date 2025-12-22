@@ -168,4 +168,8 @@ return {
       })
     end,
   },
+
+  {
+    'sainnhe/gruvbox-material',
+  },
 }

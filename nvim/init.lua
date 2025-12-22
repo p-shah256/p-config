@@ -173,6 +173,18 @@ vim.opt.shada = { "'100", '<50', 's10', 'h' }
 -- See `:help 'confirm'`
 vim.o.confirm = true
 
+-- Enable folding with treesitter
+vim.o.foldmethod = 'expr'
+vim.o.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+vim.o.foldlevel = 99 -- Open all folds by default
+vim.o.foldlevelstart = 99 -- Open all folds when opening a file
+vim.o.foldenable = true
+vim.o.foldopen = '' -- Don't automatically open folds when jumping
+
+-- Custom fold text to show just the first line
+vim.o.foldtext = ''
+vim.o.fillchars = 'fold: '
+
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
 
@@ -228,6 +240,18 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
+
+-- Auto-start treesitter highlighting for all buffers
+vim.api.nvim_create_autocmd({ 'FileType', 'BufEnter' }, {
+  callback = function()
+    local bufnr = vim.api.nvim_get_current_buf()
+    -- Check if treesitter parser exists for this filetype
+    local lang = vim.treesitter.language.get_lang(vim.bo[bufnr].filetype)
+    if lang and pcall(vim.treesitter.language.add, lang) then
+      pcall(vim.treesitter.start, bufnr)
+    end
+  end,
+})
 
 -- Highlight when yanking (copying) text
 --  Try it with `yap` in normal mode
@@ -1006,21 +1030,10 @@ require('lazy').setup({
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
-    main = 'nvim-treesitter.config', -- Sets main module to use for opts
-    -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
-    opts = {
-      ensure_installed = 'all', -- Install all maintained parsers
-      -- Autoinstall languages that are not installed
-      auto_install = true,
-      highlight = {
-        enable = true,
-        -- Some languages depend on vim's regex highlighting system (such as Ruby) for indent rules.
-        --  If you are experiencing weird indenting issues, add the language to
-        --  the list of additional_vim_regex_highlighting and disabled languages for indent.
-        additional_vim_regex_highlighting = { 'ruby' },
-      },
-      indent = { enable = true, disable = { 'ruby' } },
-    },
+    -- NOTE: Modern nvim-treesitter doesn't use the old configs.setup() API anymore.
+    -- Treesitter highlighting is now built into Neovim 0.10+ and auto-starts via
+    -- the autocommand we added in "Basic Autocommands" section (FileType/BufEnter).
+    -- Meta's setup already handles configerator -> python mapping for .cinc files.
     -- There are additional nvim-treesitter modules that you can use to interact
     -- with nvim-treesitter. You should go explore a few and see what interests you:
     --
