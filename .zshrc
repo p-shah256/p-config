@@ -20,6 +20,7 @@ POWERLEVEL9K_DISABLE_GITSTATUS=true
 POWERLEVEL10K_DISABLE_GITSTATUS=true
 export BAT_THEME="GitHub"
 
+# Load Meta-specific configuration if it exists
 [ -f ~/.zshrc.meta ] && source ~/.zshrc.meta
 
 phead() {
