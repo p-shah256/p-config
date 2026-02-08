@@ -10,10 +10,12 @@ DNF_PACKAGES=(
     curl
     lua
     # neovim
+    # installed via meta features
     parallel
     ripgrep
     zsh
     util-linux-user
+    mtr
 )
 
 CARGO_PACKAGES=(
