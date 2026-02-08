@@ -180,4 +180,64 @@ return {
       vim.cmd.colorscheme 'gruvbox-material'
     end,
   },
+
+  {
+    'nvim-orgmode/orgmode',
+    event = 'VeryLazy',
+    ft = { 'org' },
+    config = function()
+      -- Setup orgmode
+      require('orgmode').setup({
+        org_agenda_files = '~/orgfiles/**/*',
+        org_default_notes_file = '~/orgfiles/refile.org',
+        org_hide_emphasis_markers = true,
+        org_indent_mode = 'noindent', -- no virtual indent
+        org_adapt_indentation = false, -- don't auto-indent content under headings
+        org_startup_indented = false, -- don't start with indent mode
+      })
+
+      -- Org heading separators (vim help style)
+      vim.api.nvim_create_autocmd('FileType', {
+        pattern = 'org',
+        callback = function()
+          -- No auto-indent
+          vim.opt_local.autoindent = false
+          vim.opt_local.smartindent = false
+          vim.opt_local.cindent = false
+          vim.opt_local.indentexpr = ''
+
+          -- Disable signify, open all folds
+          vim.cmd('silent! SignifyDisableAll')
+          vim.opt_local.foldenable = false
+
+          -- Insert separator below current line
+          -- <leader>= for level 1 (===), <leader>- for level 2 (---)
+          vim.keymap.set('n', '<leader>=', function()
+            local row = vim.api.nvim_win_get_cursor(0)[1]
+            vim.api.nvim_buf_set_lines(0, row, row, false, { string.rep('=', 79) })
+          end, { buffer = true, desc = 'Insert === separator below' })
+
+          vim.keymap.set('n', '<leader>-', function()
+            local row = vim.api.nvim_win_get_cursor(0)[1]
+            local line = vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
+            local len = #line
+            if len > 0 then
+              vim.api.nvim_buf_set_lines(0, row, row, false, { string.rep('-', len) })
+            end
+          end, { buffer = true, desc = 'Insert --- underline below' })
+        end,
+      })
+
+      -- NOTE: If you are using nvim-treesitter with ~ensure_installed = 'all'~ option
+      -- add ~org~ to ignore_install
+      -- require('nvim-treesitter.configs').setup({
+      --   ensure_installed = 'all',
+      --   ignore_install = { 'org' },
+      -- })
+    end,
+  },
+
+  {
+    'dhruvasagar/vim-table-mode',
+  },
 }
