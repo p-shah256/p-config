@@ -2,8 +2,8 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "./logger.sh"
-source "./packages.sh"
+source "$SCRIPT_DIR/logger.sh"
+source "$SCRIPT_DIR/packages.sh"
 
 log_info "=== Devserver Setup Script ==="
 
@@ -14,7 +14,8 @@ log_info "[2/7] Cloning p-config..."
 if [ ! -d ~/p-config ]; then
     git clone --recurse-submodules https://github.com/p-shah256/p-config.git ~/p-config
 else
-    log_debug "p-config already exists, skipping clone"
+    log_debug "p-config already exists, updating submodules"
+    git -C ~/p-config submodule update --init --recursive
 fi
 
 log_info "[3/7] Installing Oh My Zsh and plugins..."
@@ -43,7 +44,11 @@ source "$HOME/.cargo/env" 2>/dev/null || true
 cargo install "${CARGO_PACKAGES[@]}"
 
 log_info "Installing atuin..."
-curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
+if command -v atuin &> /dev/null || [ -x ~/.atuin/bin/atuin ]; then
+    log_debug "atuin already installed, skipping"
+else
+    curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
+fi
 
 log_info "[6/7] Copying dotfiles..."
 cp ~/p-config/.zshrc ~/.zshrc
