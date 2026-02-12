@@ -16,6 +16,7 @@ DNF_PACKAGES=(
     zsh
     util-linux-user
     mtr
+    tmux
 )
 
 CARGO_PACKAGES=(
@@ -23,4 +24,5 @@ CARGO_PACKAGES=(
     navi
     zellij
     zoxide
+    viddy
 )

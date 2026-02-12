@@ -6,7 +6,6 @@ return {
         hg = 'sl diff -r .^ --config diff.unified=0 --config diff.noprefix=True --nodates %f',
       }
     end,
-
     config = function(_, _)
       vim.api.nvim_set_hl(0, 'SignifySignAdd', { link = 'GitSignsAdd' })
       vim.api.nvim_set_hl(0, 'SignifySignChange', { link = 'GitSignsChange' })
@@ -112,11 +111,9 @@ return {
       multiline_threshold = 20, -- Maximum number of lines to show for a single context
       trim_scope = 'outer', -- Which context lines to discard if `max_lines` is exceeded
       mode = 'cursor', -- Line used to calculate context. Choices: 'cursor', 'topline'
-
       -- Separator between context and content. Should be a single character string, like '-'.
       -- When separator is set, the context will only show up when there are at least 2 lines above cursorline.
       separator = nil,
-
       zindex = 20, -- The Z-index of the context window
       on_attach = nil, -- (fun(buf: integer): boolean) return false to disable attaching to a given buffer
     },
@@ -174,11 +171,74 @@ return {
     lazy = false,
     priority = 1000,
     config = function()
-      vim.g.gruvbox_material_background = 'soft'
+      vim.g.gruvbox_material_background = 'hard'
       vim.g.gruvbox_material_foreground = 'material'
       vim.g.gruvbox_material_better_performance = 1
       vim.cmd.colorscheme 'gruvbox-material'
     end,
+  },
+  { 'projekt0n/github-nvim-theme', name = 'github-theme' },
+  { 'nyoom-engineering/oxocarbon.nvim' },
+
+  {
+    'folke/flash.nvim',
+    event = 'VeryLazy',
+    ---@type Flash.Config
+    opts = {},
+    keys = {
+      {
+        '<leader>j',
+        mode = { 'n', 'x', 'o' },
+        function()
+          require('flash').jump()
+        end,
+        desc = 'Flash Jump',
+      },
+      {
+        'S',
+        mode = { 'n', 'x', 'o' },
+        function()
+          require('flash').treesitter()
+        end,
+        desc = 'Flash Treesitter',
+      },
+      {
+        'r',
+        mode = 'o',
+        function()
+          require('flash').remote()
+        end,
+        desc = 'Remote Flash',
+      },
+      {
+        'R',
+        mode = { 'o', 'x' },
+        function()
+          require('flash').treesitter_search()
+        end,
+        desc = 'Treesitter Search',
+      },
+      {
+        '<c-s>',
+        mode = { 'c' },
+        function()
+          require('flash').toggle()
+        end,
+        desc = 'Toggle Flash Search',
+      },
+    },
+  },
+
+  {
+    'RRethy/vim-illuminate',
+    event = 'LazyFile',
+    opts = {
+      delay = 200,
+      large_file_cutoff = 2000,
+      large_file_overrides = {
+        providers = { 'lsp' },
+      },
+    },
   },
 
   {
@@ -187,15 +247,14 @@ return {
     ft = { 'org' },
     config = function()
       -- Setup orgmode
-      require('orgmode').setup({
+      require('orgmode').setup {
         org_agenda_files = '~/orgfiles/**/*',
         org_default_notes_file = '~/orgfiles/refile.org',
         org_hide_emphasis_markers = true,
         org_indent_mode = 'noindent', -- no virtual indent
         org_adapt_indentation = false, -- don't auto-indent content under headings
         org_startup_indented = false, -- don't start with indent mode
-      })
-
+      }
       -- Org heading separators (vim help style)
       vim.api.nvim_create_autocmd('FileType', {
         pattern = 'org',
@@ -205,18 +264,15 @@ return {
           vim.opt_local.smartindent = false
           vim.opt_local.cindent = false
           vim.opt_local.indentexpr = ''
-
           -- Disable signify, open all folds
-          vim.cmd('silent! SignifyDisableAll')
+          vim.cmd 'silent! SignifyDisableAll'
           vim.opt_local.foldenable = false
-
           -- Insert separator below current line
           -- <leader>= for level 1 (===), <leader>- for level 2 (---)
           vim.keymap.set('n', '<leader>=', function()
             local row = vim.api.nvim_win_get_cursor(0)[1]
             vim.api.nvim_buf_set_lines(0, row, row, false, { string.rep('=', 79) })
           end, { buffer = true, desc = 'Insert === separator below' })
-
           vim.keymap.set('n', '<leader>-', function()
             local row = vim.api.nvim_win_get_cursor(0)[1]
             local line = vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
@@ -227,7 +283,6 @@ return {
           end, { buffer = true, desc = 'Insert --- underline below' })
         end,
       })
-
       -- NOTE: If you are using nvim-treesitter with ~ensure_installed = 'all'~ option
       -- add ~org~ to ignore_install
       -- require('nvim-treesitter.configs').setup({
@@ -237,7 +292,5 @@ return {
     end,
   },
 
-  {
-    'dhruvasagar/vim-table-mode',
-  },
+  { 'dhruvasagar/vim-table-mode' },
 }

@@ -32,6 +32,8 @@ ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
     git clone https://github.com/zsh-users/zsh-completions "$ZSH_CUSTOM/plugins/zsh-completions"
 [ ! -d "$ZSH_CUSTOM/themes/powerlevel10k" ] && \
     git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$ZSH_CUSTOM/themes/powerlevel10k"
+# if not tpm installed
+git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 
 log_info "[4/7] Installing Rust/Cargo..."
 if ! command -v cargo &> /dev/null; then
@@ -56,6 +58,7 @@ cp ~/p-config/.p10k.zsh ~/.p10k.zsh
 mkdir -p ~/.config
 cp -r ~/p-config/nvim ~/.config/nvim
 cp -r ~/p-config/zellij ~/.config/zellij
+cp -r ~/p-config/.tmux.conf ~/
 cp -r ~/p-config/bash ~/.config/bash
 
 log_info "[7/7] Initializing nvim plugins..."

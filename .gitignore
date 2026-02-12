@@ -8,3 +8,4 @@ foo.*
 data
 nvim/lua/plugins/meta.lua
 .claude
+bash/setup-meta.sh
