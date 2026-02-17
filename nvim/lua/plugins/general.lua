@@ -179,6 +179,12 @@ return {
   },
   { 'projekt0n/github-nvim-theme', name = 'github-theme' },
   { 'nyoom-engineering/oxocarbon.nvim' },
+  {
+    'zenbones-theme/zenbones.nvim',
+    dependencies = 'rktjmp/lush.nvim',
+    lazy = false,
+    priority = 1000,
+  },
 
   {
     'folke/flash.nvim',
