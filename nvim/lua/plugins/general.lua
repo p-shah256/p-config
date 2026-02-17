@@ -135,7 +135,6 @@ return {
 
   {
     'stevearc/oil.nvim',
-    opts = {},
     -- Optional dependencies
     dependencies = { { 'nvim-mini/mini.icons', opts = {} } },
     -- dependencies = { "nvim-tree/nvim-web-devicons" }, -- use if you prefer nvim-web-devicons
@@ -237,14 +236,16 @@ return {
 
   {
     'RRethy/vim-illuminate',
-    event = 'LazyFile',
-    opts = {
-      delay = 200,
-      large_file_cutoff = 2000,
-      large_file_overrides = {
-        providers = { 'lsp' },
-      },
-    },
+    event = { 'BufReadPost', 'BufNewFile', 'BufWritePre' },
+    config = function()
+      require('illuminate.config').set {
+        delay = 200,
+        large_file_cutoff = 2000,
+        large_file_overrides = {
+          providers = { 'lsp' },
+        },
+      }
+    end,
   },
 
   {
