@@ -103,7 +103,6 @@ vim.o.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
 vim.o.relativenumber = true
-vim.o.termguicolors = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
@@ -153,10 +152,6 @@ vim.o.splitbelow = true
 vim.o.list = true
 vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
 
--- minimize command line space usage
-vim.o.cmdheight = 0
-vim.o.showcmd = false
-
 -- Preview substitutions live, as you type!
 vim.o.inccommand = 'split'
 
@@ -166,38 +161,13 @@ vim.o.cursorline = true
 -- Minimal number of screen lines to keep above and below the cursor.
 vim.o.scrolloff = 10
 
--- Increase oldfiles history to 100
-vim.opt.shada = { "'100", '<50', 's10', 'h' }
-
 -- if performing an operation that would fail due to unsaved changes in the buffer (like `:q`),
 -- instead raise a dialog asking if you wish to save the current file(s)
 -- See `:help 'confirm'`
 vim.o.confirm = true
 
--- Enable folding with treesitter
-vim.o.foldmethod = 'expr'
-vim.o.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
-vim.o.foldlevel = 99 -- Open all folds by default
-vim.o.foldlevelstart = 99 -- Open all folds when opening a file
-vim.o.foldenable = true
-vim.o.foldopen = '' -- Don't automatically open folds when jumping
-
--- Custom fold text to show just the first line
-vim.o.foldtext = ''
-vim.o.fillchars = 'fold: '
-
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
-
--- map arrow keys to pane shifts.
-vim.keymap.set('n', '<Up>', '<C-w><C-k>', { noremap = true })
-vim.keymap.set('n', '<Down>', '<C-w><C-j>', { noremap = true })
-vim.keymap.set('n', '<Left>', '<C-w><C-h>', { noremap = true })
-vim.keymap.set('n', '<Right>', '<C-w><C-l>', { noremap = true })
-
-vim.keymap.set('n', '*', function()
-  vim.cmd 'keepjumps normal! mi*`i'
-end, { desc = 'Search word under cursor without jumping', noremap = true, silent = true })
 
 -- Clear highlights on search when pressing <Esc> in normal mode
 --  See `:help hlsearch`
@@ -205,10 +175,6 @@ vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
-
--- Buffer navigation
-vim.keymap.set('n', '<Tab>', '<cmd>bnext<CR>', { desc = 'Next buffer' })
-vim.keymap.set('n', '<S-Tab>', '<cmd>bprevious<CR>', { desc = 'Previous buffer' })
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
@@ -241,18 +207,7 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
-
--- Auto-start treesitter highlighting for all buffers
-vim.api.nvim_create_autocmd({ 'FileType', 'BufEnter' }, {
-  callback = function()
-    local bufnr = vim.api.nvim_get_current_buf()
-    -- Check if treesitter parser exists for this filetype
-    local lang = vim.treesitter.language.get_lang(vim.bo[bufnr].filetype)
-    if lang and pcall(vim.treesitter.language.add, lang) then
-      pcall(vim.treesitter.start, bufnr)
-    end
-  end,
-})
+require 'settings'
 
 -- Highlight when yanking (copying) text
 --  Try it with `yap` in normal mode
@@ -264,42 +219,6 @@ vim.api.nvim_create_autocmd('TextYankPost', {
     vim.hl.on_yank()
   end,
 })
-
-vim.api.nvim_create_user_command('CopyPath', function(opts)
-  local path = vim.fn.expand '%:p'
-
-  -- Use the range if provided, otherwise check visual selection marks
-  local start_line, end_line
-  if opts.range > 0 then
-    start_line = opts.line1
-    end_line = opts.line2
-  else
-    -- Check if there's a visual selection
-    local start_pos = vim.fn.getpos "'<"
-    local end_pos = vim.fn.getpos "'>"
-    start_line = start_pos[2]
-    end_line = end_pos[2]
-
-    -- Only use selection if it's valid and in current buffer
-    local current_buf = vim.api.nvim_get_current_buf()
-    local selection_buf = start_pos[1]
-
-    if not (selection_buf == current_buf and start_line > 0 and end_line > 0 and start_line <= end_line) then
-      start_line = nil
-      end_line = nil
-    end
-  end
-  if start_line and end_line then
-    if start_line == end_line then
-      path = path .. ':' .. start_line
-    else
-      path = path .. ':' .. start_line .. '-' .. end_line
-    end
-  end
-  require('osc52').copy(path)
-end, { range = true })
-vim.keymap.set('n', '<leader>cp', '<cmd>CopyPath<cr>', { desc = 'Copy Path' })
-vim.keymap.set('v', '<leader>cp', ':CopyPath<cr>', { desc = 'Copy Path' })
 
 -- [[ Install `lazy.nvim` plugin manager ]]
 --    See `:help lazy.nvim.txt` or https://github.com/folke/lazy.nvim for more info
@@ -486,15 +405,15 @@ require('lazy').setup({
       -- [[ Configure Telescope ]]
       -- See `:help telescope` and `:help telescope.setup()`
       require('telescope').setup {
-        -- You can put your default mappings / updates / etc. in here
-        --  All the info you're looking for is in `:help telescope.setup()`
-        --
-        -- defaults = {
-        --   mappings = {
-        --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
-        --   },
-        -- },
-        -- pickers = {}
+        defaults = {
+          path_display = { 'filename_first' },
+          layout_config = {
+            horizontal = {
+              width = 0.95,
+              preview_width = 0.45,
+            },
+          },
+        },
         extensions = {
           ['ui-select'] = {
             require('telescope.themes').get_dropdown(),
@@ -990,6 +909,12 @@ require('lazy').setup({
       --  - yinq - [Y]ank [I]nside [N]ext [Q]uote
       --  - ci'  - [C]hange [I]nside [']quote
       require('mini.ai').setup { n_lines = 500 }
+
+      -- Unshow, delete, and wipeout buffer while saving window layout
+      -- (opposite to builtin Neovim's commands).
+      require('mini.bufremove').setup()
+      vim.cmd([[cnoreabbrev <expr> bd getcmdtype() == ':' && getcmdline() ==# 'bd' ? 'lua MiniBufremove.delete()' : 'bd']])
+      vim.cmd([[cnoreabbrev <expr> bdelete getcmdtype() == ':' && getcmdline() ==# 'bdelete' ? 'lua MiniBufremove.delete()' : 'bdelete']])
 
       -- Add/delete/replace surroundings (brackets, quotes, etc.)
       --
