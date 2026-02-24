@@ -23,7 +23,7 @@ return {
           vim.cmd 'SignifyRefresh'
         end,
       })
-      vim.g.signify_line_highlight = 1 -- Highlight changed lines
+      -- vim.g.signify_line_highlight = 1 -- Highlight changed lines
       vim.g.signify_fold_context = { 1, 3 } -- Show 1 line before, 3 after in folds
       vim.g.signify_sign_add = '+'
       vim.g.signify_sign_change = '~'
@@ -33,6 +33,7 @@ return {
       vim.api.nvim_set_hl(0, 'SignifyLineAdd', { link = 'DiffAdd' })
       vim.api.nvim_set_hl(0, 'SignifyLineChange', { link = 'DiffChange' })
       vim.api.nvim_set_hl(0, 'SignifyLineDelete', { link = 'DiffDelete' })
+      vim.keymap.set('n', '<leader>ts', '<cmd>SignifyToggle<cr>', { desc = '[t]oggle [s]ignify' })
     end,
   },
 
@@ -43,6 +44,7 @@ return {
       local lint = require 'lint'
       lint.linters_by_ft = {
         markdown = { 'markdownlint' },
+        sh = { 'shellcheck' },
       }
       -- To allow other plugins to add linters to require('lint').linters_by_ft,
       -- instead set linters_by_ft like this:
@@ -173,7 +175,6 @@ return {
       vim.g.gruvbox_material_background = 'hard'
       vim.g.gruvbox_material_foreground = 'material'
       vim.g.gruvbox_material_better_performance = 1
-      vim.cmd.colorscheme 'gruvbox-material'
     end,
   },
   { 'projekt0n/github-nvim-theme', name = 'github-theme' },
@@ -183,6 +184,9 @@ return {
     dependencies = 'rktjmp/lush.nvim',
     lazy = false,
     priority = 1000,
+    config = function()
+      vim.cmd.colorscheme 'zenbones'
+    end,
   },
 
   {

@@ -53,6 +53,14 @@ vim.api.nvim_create_autocmd({ 'FileType', 'BufEnter' }, {
 
 vim.api.nvim_create_user_command('CopyPath', function(opts)
   local path = vim.fn.expand '%:p'
+  if path:match '^oil://' then
+    path = path:gsub('^oil://', '')
+    local cwd = vim.fn.getcwd()
+    if not cwd:match '/$' then
+      cwd = cwd .. '/'
+    end
+    path = path:gsub('^' .. vim.pesc(cwd), '')
+  end
   -- Use the range if provided, otherwise check visual selection marks
   local start_line, end_line
   if opts.range > 0 then
