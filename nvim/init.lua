@@ -556,7 +556,7 @@ require('lazy').setup({
           -- Jump to the definition of the word under your cursor.
           --  This is where a variable was first declared, or where a function is defined, etc.
           --  To jump back, press <C-t>.
-          map('grd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
+          map('grd', vim.lsp.buf.definition, '[G]oto [D]efinition')
 
           -- WARN: This is not Goto Definition, this is Goto Declaration.
           --  For example, in C this would take you to the header.
@@ -575,9 +575,7 @@ require('lazy').setup({
           --  the definition of its *type*, not where it was *defined*.
           map('grt', require('telescope.builtin').lsp_type_definitions, '[G]oto [T]ype Definition')
 
-          if client and client.name == 'clangd' then
-            map('gh', '<cmd>ClangdSwitchSourceHeader<CR>', '[G]oto [H]eader/Source')
-          end
+          map('gh', '<cmd>ClangdSwitchSourceHeader<CR>', '[G]oto [H]eader/Source')
 
           -- This function resolves a difference between neovim nightly (version 0.11) and stable (version 0.10)
           ---@param client vim.lsp.Client
@@ -780,6 +778,7 @@ require('lazy').setup({
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
+        sh = { 'shfmt' },
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
         --
@@ -913,8 +912,8 @@ require('lazy').setup({
       -- Unshow, delete, and wipeout buffer while saving window layout
       -- (opposite to builtin Neovim's commands).
       require('mini.bufremove').setup()
-      vim.cmd([[cnoreabbrev <expr> bd getcmdtype() == ':' && getcmdline() ==# 'bd' ? 'lua MiniBufremove.delete()' : 'bd']])
-      vim.cmd([[cnoreabbrev <expr> bdelete getcmdtype() == ':' && getcmdline() ==# 'bdelete' ? 'lua MiniBufremove.delete()' : 'bdelete']])
+      vim.cmd [[cnoreabbrev <expr> bd getcmdtype() == ':' && getcmdline() ==# 'bd' ? 'lua MiniBufremove.delete()' : 'bd']]
+      vim.cmd [[cnoreabbrev <expr> bdelete getcmdtype() == ':' && getcmdline() ==# 'bdelete' ? 'lua MiniBufremove.delete()' : 'bdelete']]
 
       -- Add/delete/replace surroundings (brackets, quotes, etc.)
       --
