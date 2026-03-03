@@ -91,3 +91,44 @@ vim.api.nvim_create_user_command('CopyPath', function(opts)
 end, { range = true })
 vim.keymap.set('n', '<leader>cp', '<cmd>CopyPath<cr>', { desc = 'Copy Path' })
 vim.keymap.set('v', '<leader>cp', ':CopyPath<cr>', { desc = 'Copy Path' })
+
+-- Leader shortcut to set filetype to help
+vim.keymap.set('n', '<leader>h', '<cmd>set filetype=help<CR>', { desc = 'Set filetype to help' })
+
+-- Treat .txt files as help files
+local txt_group = vim.api.nvim_create_augroup('txtfiles', { clear = true })
+vim.api.nvim_create_autocmd({ 'BufRead', 'BufNewFile', 'BufEnter' }, {
+  group = txt_group,
+  pattern = '*.txt',
+  callback = function()
+    vim.bo.filetype = 'help'
+  end,
+})
+-- Auto-regenerate tags for personal notes on save
+vim.api.nvim_create_autocmd('BufWritePost', {
+  group = txt_group,
+  pattern = vim.fn.expand('~') .. '/Desktop/txt/*.txt',
+  callback = function()
+    vim.fn.system('cd ~/Desktop/txt && grep -n "\\*[a-zA-Z0-9_-]*\\*" *.txt 2>/dev/null | sed \'s/^\\([^:]*\\):\\([0-9]*\\):.*\\(\\*[^*]*\\*\\).*/\\3\\t\\1\\t\\2/\' | tr -d \'*\' | sort -u > tags')
+  end,
+})
+
+-- Help file enhancements: folding and section navigation
+local help_group = vim.api.nvim_create_augroup('helpfiles', { clear = true })
+vim.api.nvim_create_autocmd('FileType', {
+  group = help_group,
+  pattern = 'help',
+  callback = function()
+    -- Fold on === lines, start closed, don't auto-open on scroll
+    vim.opt_local.foldmethod = 'expr'
+    vim.opt_local.foldexpr = "getline(v:lnum)=~'^='?'>1':'='"
+    vim.opt_local.foldlevel = 0
+    vim.opt_local.foldenable = true
+    vim.opt_local.foldopen = ''
+    -- Custom fold text: show section title (line after ===), strip *tag*
+    vim.opt_local.foldtext = [[substitute(getline(v:foldstart+1),'\s*\*.*\*\s*','','')]]
+    -- Jump between sections with ]] and [[
+    vim.keymap.set('n', ']]', '/^===<CR>:noh<CR>', { buffer = true, silent = true })
+    vim.keymap.set('n', '[[', '?^===<CR>:noh<CR>', { buffer = true, silent = true })
+  end,
+})
