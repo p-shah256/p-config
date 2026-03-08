@@ -196,12 +196,12 @@ return {
     opts = {},
     keys = {
       {
-        '<leader>j',
+        's',
         mode = { 'n', 'x', 'o' },
         function()
           require('flash').jump()
         end,
-        desc = 'Flash Jump',
+        desc = 'Flash',
       },
       {
         'S',
@@ -235,6 +235,14 @@ return {
         end,
         desc = 'Toggle Flash Search',
       },
+      vim.keymap.set({ 'n', 'x', 'o' }, '<c-space>', function()
+        require('flash').treesitter {
+          actions = {
+            ['<c-space>'] = 'next',
+            ['<BS>'] = 'prev',
+          },
+        }
+      end, { desc = 'Treesitter incremental selection' }),
     },
   },
 

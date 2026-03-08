@@ -348,6 +348,8 @@ require('lazy').setup({
         { '<leader>s', group = '[S]earch' },
         { '<leader>t', group = '[T]oggle' },
         { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
+        { ']', group = 'Next' },
+        { '[', group = 'Prev' },
       },
     },
   },
@@ -900,6 +902,7 @@ require('lazy').setup({
 
   { -- Collection of various small independent plugins/modules
     'echasnovski/mini.nvim',
+    dependencies = { 'nvim-treesitter/nvim-treesitter-textobjects' },
     config = function()
       -- Better Around/Inside textobjects
       --
@@ -907,7 +910,22 @@ require('lazy').setup({
       --  - va)  - [V]isually select [A]round [)]paren
       --  - yinq - [Y]ank [I]nside [N]ext [Q]uote
       --  - ci'  - [C]hange [I]nside [']quote
-      require('mini.ai').setup { n_lines = 500 }
+      --  - vina - visually inside next argument
+      --  - vam  - visually around method/function definition
+      --  - vaf  - visually around function call (name + args)
+      --  - vac  - visually around class
+      --  - vas  - visually around scope (if/loop/block)
+      require('mini.ai').setup {
+        n_lines = 500,
+        custom_textobjects = {
+          m = require('mini.ai').gen_spec.treesitter { a = '@function.outer', i = '@function.inner' },
+          c = require('mini.ai').gen_spec.treesitter { a = '@class.outer', i = '@class.inner' },
+          s = require('mini.ai').gen_spec.treesitter {
+            a = { '@conditional.outer', '@loop.outer', '@block.outer' },
+            i = { '@conditional.inner', '@loop.inner', '@block.inner' },
+          },
+        },
+      }
 
       -- Unshow, delete, and wipeout buffer while saving window layout
       -- (opposite to builtin Neovim's commands).
