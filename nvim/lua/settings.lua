@@ -2,10 +2,6 @@ vim.keymap.set('n', '*', function()
   vim.cmd 'keepjumps normal! mi*`i'
 end, { desc = 'Search word under cursor without jumping', noremap = true, silent = true })
 
--- Buffer navigation
-vim.keymap.set('n', '<Tab>', '<cmd>bnext<CR>', { desc = 'Next buffer' })
-vim.keymap.set('n', '<S-Tab>', '<cmd>bprevious<CR>', { desc = 'Previous buffer' })
-
 -- map arrow keys to pane shifts.
 vim.keymap.set('n', '<Up>', '<C-w><C-k>', { noremap = true })
 vim.keymap.set('n', '<Down>', '<C-w><C-j>', { noremap = true })
@@ -107,9 +103,9 @@ vim.api.nvim_create_autocmd({ 'BufRead', 'BufNewFile', 'BufEnter' }, {
 -- Auto-regenerate tags for personal notes on save
 vim.api.nvim_create_autocmd('BufWritePost', {
   group = txt_group,
-  pattern = vim.fn.expand('~') .. '/Desktop/txt/*.txt',
+  pattern = vim.fn.expand '~' .. '/Desktop/txt/*.txt',
   callback = function()
-    vim.fn.system('cd ~/Desktop/txt && grep -n "\\*[a-zA-Z0-9_-]*\\*" *.txt 2>/dev/null | sed \'s/^\\([^:]*\\):\\([0-9]*\\):.*\\(\\*[^*]*\\*\\).*/\\3\\t\\1\\t\\2/\' | tr -d \'*\' | sort -u > tags')
+    vim.fn.system "cd ~/Desktop/txt && grep -n \"\\*[a-zA-Z0-9_-]*\\*\" *.txt 2>/dev/null | sed 's/^\\([^:]*\\):\\([0-9]*\\):.*\\(\\*[^*]*\\*\\).*/\\3\\t\\1\\t\\2/' | tr -d '*' | sort -u > tags"
   end,
 })
 

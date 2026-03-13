@@ -132,6 +132,7 @@ return {
     -- Enable `lukas-reineke/indent-blankline.nvim`
     -- See `:help ibl`
     main = 'ibl',
+    event = { 'BufReadPost', 'BufNewFile' },
     opts = {},
   },
 
@@ -260,5 +261,5 @@ return {
     end,
   },
 
-  { 'dhruvasagar/vim-table-mode' },
+  { 'dhruvasagar/vim-table-mode', cmd = 'TableModeToggle' },
 }
