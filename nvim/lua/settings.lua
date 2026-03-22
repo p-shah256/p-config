@@ -115,14 +115,24 @@ vim.api.nvim_create_autocmd('FileType', {
   group = help_group,
   pattern = 'help',
   callback = function()
+    local is_txt = vim.fn.expand '%:e' == 'txt'
     -- Fold on === lines, start closed, don't auto-open on scroll
     vim.opt_local.foldmethod = 'expr'
     vim.opt_local.foldexpr = "getline(v:lnum)=~'^='?'>1':'='"
-    vim.opt_local.foldlevel = 0
     vim.opt_local.foldenable = true
     vim.opt_local.foldopen = ''
     -- Custom fold text: show section title (line after ===), strip *tag*
     vim.opt_local.foldtext = [[substitute(getline(v:foldstart+1),'\s*\*.*\*\s*','','')]]
+
+    if is_txt then
+      vim.opt_local.wrap = false
+      vim.opt_local.conceallevel = 0
+      vim.opt_local.foldlevel = 99
+      vim.opt_local.foldlevelstart = 99
+    else
+      vim.opt_local.foldlevel = 0
+    end
+
     -- Jump between sections with ]] and [[
     vim.keymap.set('n', ']]', '/^===<CR>:noh<CR>', { buffer = true, silent = true })
     vim.keymap.set('n', '[[', '?^===<CR>:noh<CR>', { buffer = true, silent = true })
