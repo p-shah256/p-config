@@ -118,6 +118,9 @@ vim.schedule(function()
   vim.o.clipboard = 'unnamedplus'
 end)
 
+-- Use Neovim's built-in OSC 52 for clipboard over SSH (replaces nvim-osc52 plugin)
+vim.g.clipboard = 'osc52'
+
 -- Enable break indent
 vim.o.breakindent = true
 
@@ -219,6 +222,8 @@ vim.api.nvim_create_autocmd('TextYankPost', {
     vim.hl.on_yank()
   end,
 })
+
+require('word-highlight').setup()
 
 -- [[ Install `lazy.nvim` plugin manager ]]
 --    See `:help lazy.nvim.txt` or https://github.com/folke/lazy.nvim for more info
@@ -380,9 +385,6 @@ require('lazy').setup({
         end,
       },
       { 'nvim-telescope/telescope-ui-select.nvim' },
-
-      -- Useful for getting pretty icons, but requires a Nerd Font.
-      { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
     },
     config = function()
       -- Telescope is a fuzzy finder that comes with a lot of different things that
@@ -592,9 +594,22 @@ require('lazy').setup({
             end
           end
 
-          -- Word highlighting under cursor is handled by vim-illuminate (uses treesitter, faster than LSP)
-
           local client = vim.lsp.get_client_by_id(event.data.client_id)
+
+          -- LSP word highlighting (replaces vim-illuminate for LSP buffers)
+          if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_documentHighlight, event.buf) then
+            local hl_group = vim.api.nvim_create_augroup('lsp-highlight-' .. event.buf, { clear = true })
+            vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
+              buffer = event.buf, group = hl_group,
+              callback = vim.lsp.buf.document_highlight,
+            })
+            vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
+              buffer = event.buf, group = hl_group,
+              callback = vim.lsp.buf.clear_references,
+            })
+            -- Mark buffer so regex fallback skips it
+            vim.b[event.buf].lsp_highlight = true
+          end
 
           -- The following code creates a keymap to toggle inlay hints in your
           -- code, if the language server you are using supports them
@@ -863,17 +878,6 @@ require('lazy').setup({
       signature = { enabled = true },
     },
   },
-
-  { -- You can easily change to a different colorscheme.
-    -- Change the name of the colorscheme plugin below, and then
-    -- change the command in the config to whatever the name of that colorscheme is.
-    --
-    -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-    'folke/tokyonight.nvim',
-  },
-
-  -- Highlight todo, notes, etc in comments
-  { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
 
   { -- Collection of various small independent plugins/modules
     'echasnovski/mini.nvim',

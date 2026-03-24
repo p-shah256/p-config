@@ -1,5 +1,15 @@
 return {
   {
+    'nvim-mini/mini.icons',
+    lazy = false,
+    priority = 100,
+    config = function()
+      require('mini.icons').setup()
+      MiniIcons.mock_nvim_web_devicons()
+    end,
+  },
+
+  {
     'mhinz/vim-signify',
     init = function(_)
       vim.g.signify_vcs_cmds = {
@@ -139,8 +149,7 @@ return {
   {
     'stevearc/oil.nvim',
     -- Optional dependencies
-    dependencies = { { 'nvim-mini/mini.icons', opts = {} } },
-    -- dependencies = { "nvim-tree/nvim-web-devicons" }, -- use if you prefer nvim-web-devicons
+    dependencies = { 'nvim-mini/mini.icons' },
     -- Lazy loading is not recommended because it is very tricky to make it work correctly in all situations.
     lazy = false,
     config = function()
@@ -149,24 +158,6 @@ return {
     end,
   },
 
-  {
-    'ojroques/nvim-osc52',
-    config = function()
-      require('osc52').setup {
-        max_length = 0,
-        silent = true,
-        trim = false,
-      }
-
-      vim.api.nvim_create_autocmd('TextYankPost', {
-        callback = function()
-          if vim.v.event.regname == '' then
-            require('osc52').copy_register '"'
-          end
-        end,
-      })
-    end,
-  },
 
   {
     'sainnhe/gruvbox-material',
@@ -247,19 +238,6 @@ return {
     },
   },
 
-  {
-    'RRethy/vim-illuminate',
-    event = { 'BufReadPost', 'BufNewFile', 'BufWritePre' },
-    config = function()
-      require('illuminate.config').set {
-        delay = 200,
-        large_file_cutoff = 2000,
-        large_file_overrides = {
-          providers = { 'lsp' },
-        },
-      }
-    end,
-  },
 
   { 'dhruvasagar/vim-table-mode', cmd = 'TableModeToggle' },
 }
