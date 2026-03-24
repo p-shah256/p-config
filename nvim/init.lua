@@ -224,6 +224,8 @@ vim.api.nvim_create_autocmd('TextYankPost', {
 })
 
 require('word-highlight').setup()
+require('guess-indent').setup()
+require('bufdelete').setup()
 
 -- [[ Install `lazy.nvim` plugin manager ]]
 --    See `:help lazy.nvim.txt` or https://github.com/folke/lazy.nvim for more info
@@ -253,7 +255,6 @@ rtp:prepend(lazypath)
 -- NOTE: Here is where you install your plugins.
 require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
-  'NMAC427/guess-indent.nvim', -- Detect tabstop and shiftwidth automatically
 
   -- NOTE: Plugins can also be added by using a table,
   -- with the first argument being the link and the following
@@ -906,11 +907,6 @@ require('lazy').setup({
         },
       }
 
-      -- Unshow, delete, and wipeout buffer while saving window layout
-      -- (opposite to builtin Neovim's commands).
-      require('mini.bufremove').setup()
-      vim.cmd [[cnoreabbrev <expr> bd getcmdtype() == ':' && getcmdline() ==# 'bd' ? 'lua MiniBufremove.delete()' : 'bd']]
-      vim.cmd [[cnoreabbrev <expr> bdelete getcmdtype() == ':' && getcmdline() ==# 'bdelete' ? 'lua MiniBufremove.delete()' : 'bdelete']]
 
       -- Add/delete/replace surroundings (brackets, quotes, etc.)
       --
@@ -924,7 +920,7 @@ require('lazy').setup({
       --  and try some other statusline plugin
       local statusline = require 'mini.statusline'
       -- set use_icons to true if you have a Nerd Font
-      statusline.setup { use_icons = vim.g.have_nerd_font }
+      statusline.setup { use_icons = false }
 
       -- You can configure sections in the statusline by overriding their
       -- default behavior. For example, here we set the section for

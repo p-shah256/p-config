@@ -1,13 +1,4 @@
 return {
-  {
-    'nvim-mini/mini.icons',
-    lazy = false,
-    priority = 100,
-    config = function()
-      require('mini.icons').setup()
-      MiniIcons.mock_nvim_web_devicons()
-    end,
-  },
 
   {
     'mhinz/vim-signify',
@@ -149,7 +140,6 @@ return {
   {
     'stevearc/oil.nvim',
     -- Optional dependencies
-    dependencies = { 'nvim-mini/mini.icons' },
     -- Lazy loading is not recommended because it is very tricky to make it work correctly in all situations.
     lazy = false,
     config = function()
