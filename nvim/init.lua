@@ -291,6 +291,7 @@ require('guess-indent').setup()
 require('bufdelete').setup()
 require('autopairs').setup()
 require('format').setup()
+require('lint').setup()
 require('statusline').setup()
 
 -- [[ Install `lazy.nvim` plugin manager ]]
