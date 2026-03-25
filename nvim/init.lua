@@ -98,6 +98,21 @@ vim.g.have_nerd_font = true
 -- NOTE: You can change these options as you wish!
 --  For more options, you can see `:help option-list`
 
+-- Shorten file-info messages so they don't trigger "Press ENTER"
+vim.o.shortmess = vim.o.shortmess .. 'cCFW'
+vim.lsp.set_log_level 'OFF'
+
+-- Suppress noisy LSP request messages (e.g. completion params JSON)
+local orig_notify = vim.notify
+vim.notify = function(msg, ...)
+  if type(msg) == 'string' and msg:match '"textDocument"' then
+    return
+  end
+  return orig_notify(msg, ...)
+end
+vim.o.completeopt = 'menuone,noselect,fuzzy,popup'
+vim.o.pumheight = 10
+
 -- Make line numbers default
 vim.o.number = true
 -- You can also add relative line numbers, to help with jumping.
@@ -114,12 +129,21 @@ vim.o.showmode = false
 --  Schedule the setting after `UiEnter` because it can increase startup-time.
 --  Remove this option if you want your OS clipboard to remain independent.
 --  See `:help 'clipboard'`
+-- Use Neovim's built-in OSC 52 for clipboard over SSH (replaces nvim-osc52 plugin)
+vim.g.clipboard = {
+  name = 'OSC 52',
+  copy = {
+    ['+'] = require('vim.ui.clipboard.osc52').copy '+',
+    ['*'] = require('vim.ui.clipboard.osc52').copy '+',
+  },
+  paste = {
+    ['+'] = require('vim.ui.clipboard.osc52').paste '+',
+    ['*'] = require('vim.ui.clipboard.osc52').paste '+',
+  },
+}
 vim.schedule(function()
   vim.o.clipboard = 'unnamedplus'
 end)
-
--- Use Neovim's built-in OSC 52 for clipboard over SSH (replaces nvim-osc52 plugin)
-vim.g.clipboard = 'osc52'
 
 -- Enable break indent
 vim.o.breakindent = true
@@ -176,6 +200,34 @@ vim.o.confirm = true
 --  See `:help hlsearch`
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
+-- Snippet jump: Tab/S-Tab to move between placeholders (built-in vim.snippet)
+vim.keymap.set({ 'i', 's' }, '<Tab>', function()
+  if vim.snippet.active { direction = 1 } then vim.snippet.jump(1) else return '<Tab>' end
+end, { expr = true })
+vim.keymap.set({ 'i', 's' }, '<S-Tab>', function()
+  if vim.snippet.active { direction = -1 } then vim.snippet.jump(-1) else return '<S-Tab>' end
+end, { expr = true })
+
+
+
+-- Keyword completion for buffers without LSP completion (triggers after 3+ chars)
+-- Uses omnifunc so <C-n> works naturally; the TextChangedI just triggers it.
+vim.api.nvim_create_autocmd('TextChangedI', {
+  callback = function()
+    -- Skip if LSP completion is active (vim.lsp.completion.enable sets this)
+    if vim.b._lsp_completion then return end
+    if vim.fn.pumvisible() == 1 then return end
+    local col = vim.fn.col '.' - 1
+    if col < 3 then return end
+    local line = vim.api.nvim_get_current_line()
+    local before = line:sub(col - 2, col)
+    if before:match '%w%w%w$' then
+      local keys = vim.api.nvim_replace_termcodes('<C-x><C-n>', true, false, true)
+      vim.api.nvim_feedkeys(keys, 'm', false)
+    end
+  end,
+})
+
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
 
@@ -223,9 +275,23 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   end,
 })
 
+-- Adaptive indent guides: reads shiftwidth per buffer
+vim.api.nvim_create_autocmd({ 'BufEnter', 'OptionSet' }, {
+  pattern = { '*', 'shiftwidth' },
+  callback = function()
+    local sw = vim.bo.shiftwidth
+    if sw == 0 then sw = vim.bo.tabstop end
+    if sw < 1 then sw = 4 end
+    vim.opt_local.listchars:append { leadmultispace = '│' .. string.rep(' ', sw - 1) }
+  end,
+})
+
 require('word-highlight').setup()
 require('guess-indent').setup()
 require('bufdelete').setup()
+require('autopairs').setup()
+require('format').setup()
+require('statusline').setup()
 
 -- [[ Install `lazy.nvim` plugin manager ]]
 --    See `:help lazy.nvim.txt` or https://github.com/folke/lazy.nvim for more info
@@ -304,61 +370,6 @@ require('lazy').setup({
   --
   -- Then, because we use the `opts` key (recommended), the configuration runs
   -- after the plugin has been loaded as `require(MODULE).setup(opts)`.
-
-  { -- Useful plugin to show you pending keybinds.
-    'folke/which-key.nvim',
-    event = 'VimEnter', -- Sets the loading event to 'VimEnter'
-    opts = {
-      -- delay between pressing a key and opening which-key (milliseconds)
-      -- this setting is independent of vim.o.timeoutlen
-      delay = 0,
-      icons = {
-        -- set icon mappings to true if you have a Nerd Font
-        mappings = vim.g.have_nerd_font,
-        -- If you are using a Nerd Font: set icons.keys to an empty table which will use the
-        -- default which-key.nvim defined Nerd Font icons, otherwise define a string table
-        keys = vim.g.have_nerd_font and {} or {
-          Up = '<Up> ',
-          Down = '<Down> ',
-          Left = '<Left> ',
-          Right = '<Right> ',
-          C = '<C-…> ',
-          M = '<M-…> ',
-          D = '<D-…> ',
-          S = '<S-…> ',
-          CR = '<CR> ',
-          Esc = '<Esc> ',
-          ScrollWheelDown = '<ScrollWheelDown> ',
-          ScrollWheelUp = '<ScrollWheelUp> ',
-          NL = '<NL> ',
-          BS = '<BS> ',
-          Space = '<Space> ',
-          Tab = '<Tab> ',
-          F1 = '<F1>',
-          F2 = '<F2>',
-          F3 = '<F3>',
-          F4 = '<F4>',
-          F5 = '<F5>',
-          F6 = '<F6>',
-          F7 = '<F7>',
-          F8 = '<F8>',
-          F9 = '<F9>',
-          F10 = '<F10>',
-          F11 = '<F11>',
-          F12 = '<F12>',
-        },
-      },
-
-      -- Document existing key chains
-      spec = {
-        { '<leader>s', group = '[S]earch' },
-        { '<leader>t', group = '[T]oggle' },
-        { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
-        { ']', group = 'Next' },
-        { '[', group = 'Prev' },
-      },
-    },
-  },
 
   -- NOTE: Plugins can specify dependencies.
   --
@@ -493,12 +504,6 @@ require('lazy').setup({
       { 'mason-org/mason.nvim', opts = {} },
       'mason-org/mason-lspconfig.nvim',
       'WhoIsSethDaniel/mason-tool-installer.nvim',
-
-      -- Useful status updates for LSP.
-      { 'j-hui/fidget.nvim', opts = {} },
-
-      -- Allows extra capabilities provided by blink.cmp
-      'saghen/blink.cmp',
     },
     config = function()
       -- Brief aside: **What is LSP?**
@@ -601,11 +606,13 @@ require('lazy').setup({
           if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_documentHighlight, event.buf) then
             local hl_group = vim.api.nvim_create_augroup('lsp-highlight-' .. event.buf, { clear = true })
             vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
-              buffer = event.buf, group = hl_group,
+              buffer = event.buf,
+              group = hl_group,
               callback = vim.lsp.buf.document_highlight,
             })
             vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
-              buffer = event.buf, group = hl_group,
+              buffer = event.buf,
+              group = hl_group,
               callback = vim.lsp.buf.clear_references,
             })
             -- Mark buffer so regex fallback skips it
@@ -616,15 +623,33 @@ require('lazy').setup({
           -- code, if the language server you are using supports them
           --
           -- This may be unwanted, since they displace some of your code
-          if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_inlayHint, event.buf) then
-            map('<leader>th', function()
-              vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
-            end, '[T]oggle Inlay [H]ints')
-          end
+          -- if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_inlayHint, event.buf) then
+          --   map('<leader>th', function()
+          --     vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
+          --   end, '[T]oggle Inlay [H]ints')
+          -- end
 
-          -- Enable semantic token highlighting for richer syntax colors
-          if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_semanticTokens_full, event.buf) then
-            vim.lsp.semantic_tokens.start(event.buf, client.id)
+          -- -- Enable semantic token highlighting for richer syntax colors
+          -- if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_semanticTokens_full, event.buf) then
+          --   vim.lsp.semantic_tokens.start(event.buf, client.id)
+          -- end
+
+          -- Built-in LSP completion: auto-triggers on every keypress, <C-y> to accept
+          local client = vim.lsp.get_client_by_id(event.data.client_id)
+          if client and client.supports_method 'textDocument/completion' then
+            local chars = {}
+            for i = string.byte 'a', string.byte 'z' do chars[#chars + 1] = string.char(i) end
+            for i = string.byte 'A', string.byte 'Z' do chars[#chars + 1] = string.char(i) end
+            for i = string.byte '0', string.byte '9' do chars[#chars + 1] = string.char(i) end
+            chars[#chars + 1] = '_'
+            local caps = client.server_capabilities or {}
+            local provider = caps.completionProvider or {}
+            local existing = provider.triggerCharacters or {}
+            for _, c in ipairs(chars) do existing[#existing + 1] = c end
+            provider.triggerCharacters = existing
+            caps.completionProvider = provider
+            vim.lsp.completion.enable(true, event.data.client_id, event.buf, { autotrigger = true })
+            vim.b[event.buf]._lsp_completion = true
           end
         end,
       })
@@ -658,11 +683,7 @@ require('lazy').setup({
         },
       }
 
-      -- LSP servers and clients are able to communicate to each other what features they support.
-      --  By default, Neovim doesn't support everything that is in the LSP specification.
-      --  When you add blink.cmp, luasnip, etc. Neovim now has *more* capabilities.
-      --  So, we create new capabilities with blink.cmp, and then broadcast that to the servers.
-      local capabilities = require('blink.cmp').get_lsp_capabilities()
+      local capabilities = vim.lsp.protocol.make_client_capabilities()
 
       -- Enable the following language servers
       --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
@@ -739,146 +760,6 @@ require('lazy').setup({
     end,
   },
 
-  { -- Autoformat
-    'stevearc/conform.nvim',
-    event = { 'BufWritePre' },
-    cmd = { 'ConformInfo' },
-    keys = {
-      {
-        '<leader>f',
-        function()
-          require('conform').format { async = true, lsp_format = 'fallback' }
-        end,
-        mode = '',
-        desc = '[F]ormat buffer',
-      },
-    },
-    opts = {
-      notify_on_error = false,
-      format_on_save = function(bufnr)
-        -- Disable "format_on_save lsp_fallback" for languages that don't
-        -- have a well standardized coding style. You can add additional
-        -- languages here or re-enable it for the disabled ones.
-        local disable_filetypes = { c = true }
-        if disable_filetypes[vim.bo[bufnr].filetype] then
-          return nil
-        else
-          return {
-            timeout_ms = 500,
-            lsp_format = 'fallback',
-          }
-        end
-      end,
-      formatters_by_ft = {
-        lua = { 'stylua' },
-        sh = { 'shfmt' },
-        -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
-        --
-        -- You can use 'stop_after_first' to run the first available formatter from the list
-        -- javascript = { "prettierd", "prettier", stop_after_first = true },
-      },
-    },
-  },
-
-  { -- Autocompletion
-    'saghen/blink.cmp',
-    event = 'VimEnter',
-    version = '1.*',
-    dependencies = {
-      -- Snippet Engine
-      {
-        'L3MON4D3/LuaSnip',
-        version = '2.*',
-        build = (function()
-          -- Build Step is needed for regex support in snippets.
-          -- This step is not supported in many windows environments.
-          -- Remove the below condition to re-enable on windows.
-          if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then
-            return
-          end
-          return 'make install_jsregexp'
-        end)(),
-        dependencies = {
-          -- `friendly-snippets` contains a variety of premade snippets.
-          --    See the README about individual language/framework/plugin snippets:
-          --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
-        },
-        opts = {},
-      },
-      'folke/lazydev.nvim',
-    },
-    --- @module 'blink.cmp'
-    --- @type blink.cmp.Config
-    opts = {
-      keymap = {
-        -- 'default' (recommended) for mappings similar to built-in completions
-        --   <c-y> to accept ([y]es) the completion.
-        --    This will auto-import if your LSP supports it.
-        --    This will expand snippets if the LSP sent a snippet.
-        -- 'super-tab' for tab to accept
-        -- 'enter' for enter to accept
-        -- 'none' for no mappings
-        --
-        -- For an understanding of why the 'default' preset is recommended,
-        -- you will need to read `:help ins-completion`
-        --
-        -- No, but seriously. Please read `:help ins-completion`, it is really good!
-        --
-        -- All presets have the following mappings:
-        -- <tab>/<s-tab>: move to right/left of your snippet expansion
-        -- <c-space>: Open menu or open docs if already open
-        -- <c-n>/<c-p> or <up>/<down>: Select next/previous item
-        -- <c-e>: Hide menu
-        -- <c-k>: Toggle signature help
-        --
-        -- See :h blink-cmp-config-keymap for defining your own keymap
-        preset = 'default',
-
-        -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
-        --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
-      },
-
-      appearance = {
-        -- 'mono' (default) for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
-        -- Adjusts spacing to ensure icons are aligned
-        nerd_font_variant = 'mono',
-      },
-
-      completion = {
-        -- By default, you may press `<c-space>` to show the documentation.
-        -- Optionally, set `auto_show = true` to show the documentation after a delay.
-        documentation = { auto_show = true, auto_show_delay_ms = 200 },
-      },
-
-      sources = {
-        default = { 'lsp', 'path', 'snippets', 'lazydev' },
-        providers = {
-          lazydev = { module = 'lazydev.integrations.blink', score_offset = 100 },
-        },
-      },
-
-      snippets = { preset = 'luasnip' },
-
-      -- Blink.cmp includes an optional, recommended rust fuzzy matcher,
-      -- which automatically downloads a prebuilt binary when enabled.
-      --
-      -- By default, we use the Lua implementation instead, but you may enable
-      -- the rust implementation via `'prefer_rust_with_warning'`
-      --
-      -- See :h blink-cmp-config-fuzzy for more information
-      fuzzy = { implementation = 'prefer_rust_with_warning' },
-
-      -- Shows a signature help window while you type arguments for a function
-      signature = { enabled = true },
-    },
-  },
 
   { -- Collection of various small independent plugins/modules
     'echasnovski/mini.nvim',
@@ -907,31 +788,12 @@ require('lazy').setup({
         },
       }
 
-
       -- Add/delete/replace surroundings (brackets, quotes, etc.)
       --
       -- - saiw) - [S]urround [A]dd [I]nner [W]ord [)]Paren
       -- - sd'   - [S]urround [D]elete [']quotes
       -- - sr)'  - [S]urround [R]eplace [)] [']
       require('mini.surround').setup()
-
-      -- Simple and easy statusline.
-      --  You could remove this setup call if you don't like it,
-      --  and try some other statusline plugin
-      local statusline = require 'mini.statusline'
-      -- set use_icons to true if you have a Nerd Font
-      statusline.setup { use_icons = false }
-
-      -- You can configure sections in the statusline by overriding their
-      -- default behavior. For example, here we set the section for
-      -- cursor location to LINE:COLUMN
-      ---@diagnostic disable-next-line: duplicate-set-field
-      statusline.section_location = function()
-        return '%2l:%-2v'
-      end
-
-      -- ... and there is more!
-      --  Check out: https://github.com/echasnovski/mini.nvim
     end,
   },
   { -- Highlight, edit, and navigate code

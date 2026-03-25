@@ -83,7 +83,8 @@ vim.api.nvim_create_user_command('CopyPath', function(opts)
       path = path .. ':' .. start_line .. '-' .. end_line
     end
   end
-  require('osc52').copy(path)
+  vim.fn.setreg('+', path)
+  vim.notify('Copied: ' .. path)
 end, { range = true })
 vim.keymap.set('n', '<leader>cp', '<cmd>CopyPath<cr>', { desc = 'Copy Path' })
 vim.keymap.set('v', '<leader>cp', ':CopyPath<cr>', { desc = 'Copy Path' })
