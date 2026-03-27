@@ -1,6 +1,5 @@
 -- Minimal statusline (replaces mini.statusline).
---
--- Layout: MODE  filename [modified]    LSP status/clients    diagnostics    line:col
+-- Adapts to window width: narrows gracefully in splits.
 
 local M = {}
 
@@ -10,37 +9,39 @@ local mode_map = {
 }
 
 function M.setup()
-  vim.o.statusline = '%!v:lua.Statusline()'
+  vim.o.statusline = '%!v:lua.Statusline(g:statusline_winid)'
 end
 
-function _G.Statusline()
+function _G.Statusline(winid)
+  winid = winid or vim.api.nvim_get_current_win()
+  local bufnr = vim.api.nvim_win_get_buf(winid)
+  local w = vim.api.nvim_win_get_width(winid)
   local mode = mode_map[vim.fn.mode()] or vim.fn.mode()
-  local filename = vim.fn.expand '%:t'
-  if filename == '' then filename = '[No Name]' end
-  local modified = vim.bo.modified and ' [+]' or ''
+  local fullpath = vim.api.nvim_buf_get_name(bufnr)
+  local filename
+  if fullpath == '' then
+    filename = '[No Name]'
+  elseif w < 60 then
+    filename = vim.fn.fnamemodify(fullpath, ':t')
+  else
+    filename = vim.fn.fnamemodify(fullpath, ':.')
+  end
+  local modified = vim.bo[bufnr].modified and ' [+]' or ''
 
-  -- LSP: show progress if loading, otherwise show attached client names
-  local lsp = vim.lsp.status()
-  if lsp == '' then
-    local clients = vim.lsp.get_clients { bufnr = 0 }
-    if #clients > 0 then
-      local names = {}
-      for _, c in ipairs(clients) do names[#names + 1] = c.name end
-      lsp = table.concat(names, ', ')
-    end
+  -- Narrow: just mode + filename + position
+  if w < 60 then
+    return string.format(' %s  %s%s%%= %%2l:%%2v ', mode, filename, modified)
   end
 
-  -- VCS changes from signify (already cached, no shell call)
-  local vcs = ''
-  local sy = vim.b.sy
-  if sy and sy.stats then
-    local a, c, d = sy.stats[1], sy.stats[2], sy.stats[3]
-    if a + c + d > 0 then
-      vcs = string.format('+%d ~%d -%d', a, c, d)
-    end
+  -- Diagnostics
+  local diag = ''
+  local e = #vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.ERROR })
+  local warn = #vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.WARN })
+  if e + warn > 0 then
+    diag = string.format('E:%d W:%d', e, warn)
   end
 
-  -- Search count: [3/15]
+  -- Search count
   local search = ''
   if vim.v.hlsearch == 1 then
     local ok, sc = pcall(vim.fn.searchcount, { maxcount = 999 })
@@ -49,19 +50,21 @@ function _G.Statusline()
     end
   end
 
-  -- Diagnostics: E:0 W:0
-  local diag = ''
-  if #vim.lsp.get_clients { bufnr = 0 } > 0 then
-    local e = #vim.diagnostic.get(0, { severity = vim.diagnostic.severity.ERROR })
-    local w = #vim.diagnostic.get(0, { severity = vim.diagnostic.severity.WARN })
-    if e + w > 0 then
-      diag = string.format('E:%d W:%d', e, w)
+  -- VCS changes from signify
+  local vcs = ''
+  if w >= 80 then
+    local sy = vim.b[bufnr].sy
+    if sy and sy.stats then
+      local a, c, d = sy.stats[1], sy.stats[2], sy.stats[3]
+      if a + c + d > 0 then
+        vcs = string.format('+%d ~%d -%d', a, c, d)
+      end
     end
   end
 
   return string.format(
-    ' %s  %s%s%%=  %s    %s    %s    %s    %%2l:%%2v ',
-    mode, filename, modified, lsp or '', vcs, search, diag
+    ' %s  %s%s%%=  %s    %s    %s    %%2l:%%2v ',
+    mode, filename, modified, vcs, search, diag
   )
 end
 
