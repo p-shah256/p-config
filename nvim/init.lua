@@ -110,6 +110,7 @@ vim.notify = function(msg, ...)
   end
   return orig_notify(msg, ...)
 end
+vim.o.wrap = false
 vim.o.completeopt = 'menuone,noselect,fuzzy,popup'
 vim.o.pumheight = 10
 
@@ -214,7 +215,8 @@ end, { expr = true })
 -- Uses omnifunc so <C-n> works naturally; the TextChangedI just triggers it.
 vim.api.nvim_create_autocmd('TextChangedI', {
   callback = function()
-    -- Skip if LSP completion is active (vim.lsp.completion.enable sets this)
+    -- Skip special buffers (Telescope, command line, etc.) and LSP-enabled buffers
+    if vim.bo.buftype ~= '' then return end
     if vim.b._lsp_completion then return end
     if vim.fn.pumvisible() == 1 then return end
     local col = vim.fn.col '.' - 1
@@ -275,16 +277,8 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   end,
 })
 
--- Adaptive indent guides: reads shiftwidth per buffer
-vim.api.nvim_create_autocmd({ 'BufEnter', 'OptionSet' }, {
-  pattern = { '*', 'shiftwidth' },
-  callback = function()
-    local sw = vim.bo.shiftwidth
-    if sw == 0 then sw = vim.bo.tabstop end
-    if sw < 1 then sw = 4 end
-    vim.opt_local.listchars:append { leadmultispace = '│' .. string.rep(' ', sw - 1) }
-  end,
-})
+-- Cursor-aware indent guides (highlights active indent level, dims others)
+require('indent-guides').setup()
 
 require('word-highlight').setup()
 require('guess-indent').setup()

@@ -29,6 +29,10 @@ function M.setup()
       if open == close and char_before():match '[%w]' then
         return open
       end
+      -- If next char is a word character, surround the word
+      if after:match '[%w]' then
+        return open .. '<Esc>ea' .. close .. '<Esc>bi'
+      end
       return open .. close .. '<Left>'
     end, { expr = true, noremap = true })
 

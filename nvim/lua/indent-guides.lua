@@ -22,10 +22,9 @@ local function redraw(bufnr)
     local indent = #line:match('^%s*')
     if line:find('%S') then
       for level = 1, math.floor(indent / sw) do
-        vim.api.nvim_buf_set_extmark(bufnr, ns, top + i - 1, 0, {
+        vim.api.nvim_buf_set_extmark(bufnr, ns, top + i - 1, (level - 1) * sw, {
           virt_text = { { '│', level == active_level and 'IndentGuideActive' or 'IndentGuide' } },
           virt_text_pos = 'overlay',
-          virt_text_win_col = (level - 1) * sw,
           priority = 1,
         })
       end

@@ -19,7 +19,7 @@ local severity_map = {
 local function run_lint(buf)
   local cmd = linters_by_ft[vim.bo[buf].filetype]
   if not cmd or vim.fn.executable(cmd[1]) ~= 1 then
-    print("No linters for this filetype found")
+    -- print("No linters for this filetype found")
     return
   end
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
