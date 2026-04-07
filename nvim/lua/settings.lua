@@ -1,16 +1,11 @@
 -- Disable LSP for BUCK, Makefile, and similar build files
-local lsp_skip_patterns = { '^BUCK$', '^Makefile', '^TARGETS$' }
-vim.api.nvim_create_autocmd({ 'BufRead', 'BufNewFile' }, {
-  pattern = { 'BUCK', 'Makefile*', 'TARGETS' },
-  callback = function(args)
-    vim.b[args.buf]._lsp_disabled = true
-  end,
-})
 vim.api.nvim_create_autocmd('LspAttach', {
   callback = function(args)
-    if vim.b[args.buf]._lsp_disabled then
+    local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(args.buf), ':t')
+    if name:match '^BUCK$' or name:match '^Makefile' or name:match '^TARGETS$' then
       vim.schedule(function()
-        for _, client in ipairs(vim.lsp.get_clients { bufnr = args.buf }) do
+        local clients = vim.lsp.get_clients { bufnr = args.buf }
+        for _, client in ipairs(clients) do
           vim.lsp.buf_detach_client(args.buf, client.id)
         end
         vim.b[args.buf]._lsp_completion = nil
@@ -41,6 +36,8 @@ vim.keymap.set('n', '{', ':<C-u>execute "keepjumps norm! " . v:count1 . "{"<CR>'
 vim.keymap.set('v', '}', ':<C-u>execute "keepjumps norm! gv" . v:count1 . "}"<CR>', { silent = true })
 vim.keymap.set('v', '{', ':<C-u>execute "keepjumps norm! gv" . v:count1 . "{"<CR>', { silent = true })
 
+vim.o.termguicolors = true
+
 -- minimize command line space usage
 vim.o.cmdheight = 0
 vim.o.showcmd = false
@@ -61,11 +58,13 @@ vim.o.foldtext = ''
 vim.o.fillchars = 'fold: '
 
 -- Auto-start treesitter highlighting for all buffers
-vim.api.nvim_create_autocmd('FileType', {
-  callback = function(args)
-    local lang = vim.treesitter.language.get_lang(vim.bo[args.buf].filetype)
+vim.api.nvim_create_autocmd({ 'FileType', 'BufEnter' }, {
+  callback = function()
+    local bufnr = vim.api.nvim_get_current_buf()
+    -- Check if treesitter parser exists for this filetype
+    local lang = vim.treesitter.language.get_lang(vim.bo[bufnr].filetype)
     if lang and pcall(vim.treesitter.language.add, lang) then
-      pcall(vim.treesitter.start, args.buf)
+      pcall(vim.treesitter.start, bufnr)
     end
   end,
 })
