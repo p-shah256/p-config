@@ -1,3 +1,30 @@
+-- Disable LSP for BUCK, Makefile, and similar build files
+local lsp_skip_patterns = { '^BUCK$', '^Makefile', '^TARGETS$' }
+vim.api.nvim_create_autocmd({ 'BufRead', 'BufNewFile' }, {
+  pattern = { 'BUCK', 'Makefile*', 'TARGETS' },
+  callback = function(args)
+    vim.b[args.buf]._lsp_disabled = true
+  end,
+})
+vim.api.nvim_create_autocmd('LspAttach', {
+  callback = function(args)
+    if vim.b[args.buf]._lsp_disabled then
+      vim.schedule(function()
+        for _, client in ipairs(vim.lsp.get_clients { bufnr = args.buf }) do
+          vim.lsp.buf_detach_client(args.buf, client.id)
+        end
+        vim.b[args.buf]._lsp_completion = nil
+      end)
+    end
+  end,
+})
+
+-- Toggle between light and dark background
+vim.keymap.set('n', '<leader>tb', function()
+  vim.o.background = vim.o.background == 'dark' and 'light' or 'dark'
+  vim.notify('background=' .. vim.o.background)
+end, { desc = '[T]oggle [B]ackground (light/dark)' })
+
 vim.keymap.set('n', '*', function()
   vim.cmd 'keepjumps normal! mi*`i'
 end, { desc = 'Search word under cursor without jumping', noremap = true, silent = true })
@@ -13,8 +40,6 @@ vim.keymap.set('n', '}', ':<C-u>execute "keepjumps norm! " . v:count1 . "}"<CR>'
 vim.keymap.set('n', '{', ':<C-u>execute "keepjumps norm! " . v:count1 . "{"<CR>', { silent = true })
 vim.keymap.set('v', '}', ':<C-u>execute "keepjumps norm! gv" . v:count1 . "}"<CR>', { silent = true })
 vim.keymap.set('v', '{', ':<C-u>execute "keepjumps norm! gv" . v:count1 . "{"<CR>', { silent = true })
-
-vim.o.termguicolors = true
 
 -- minimize command line space usage
 vim.o.cmdheight = 0
@@ -36,13 +61,11 @@ vim.o.foldtext = ''
 vim.o.fillchars = 'fold: '
 
 -- Auto-start treesitter highlighting for all buffers
-vim.api.nvim_create_autocmd({ 'FileType', 'BufEnter' }, {
-  callback = function()
-    local bufnr = vim.api.nvim_get_current_buf()
-    -- Check if treesitter parser exists for this filetype
-    local lang = vim.treesitter.language.get_lang(vim.bo[bufnr].filetype)
+vim.api.nvim_create_autocmd('FileType', {
+  callback = function(args)
+    local lang = vim.treesitter.language.get_lang(vim.bo[args.buf].filetype)
     if lang and pcall(vim.treesitter.language.add, lang) then
-      pcall(vim.treesitter.start, bufnr)
+      pcall(vim.treesitter.start, args.buf)
     end
   end,
 })

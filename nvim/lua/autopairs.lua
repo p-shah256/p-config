@@ -3,7 +3,7 @@
 
 local M = {}
 
-local pairs_map = { ['('] = ')', ['['] = ']', ['{'] = '}', ['"'] = '"', ["'"] = "'" }
+local pairs_map = { ['('] = ')', ['['] = ']', ['{'] = '}', ['"'] = '"', ["'"] = "'", ['`'] = '`' }
 
 local function char_after()
   local col = vim.api.nvim_win_get_cursor(0)[2]
@@ -29,9 +29,9 @@ function M.setup()
       if open == close and char_before():match '[%w]' then
         return open
       end
-      -- If next char is a word character, surround the word
+      -- Don't auto-pair if next char is a word character
       if after:match '[%w]' then
-        return open .. '<Esc>ea' .. close .. '<Esc>bi'
+        return open
       end
       return open .. close .. '<Left>'
     end, { expr = true, noremap = true })
@@ -61,7 +61,7 @@ function M.setup()
   vim.keymap.set('i', '<CR>', function()
     local before = char_before()
     local after = char_after()
-    if pairs_map[before] and pairs_map[before] == after and before ~= '"' and before ~= "'" then
+    if pairs_map[before] and pairs_map[before] == after and before ~= '"' and before ~= "'" and before ~= '`' then
       return '<CR><CR><Up><C-f>'
     end
     return '<CR>'
