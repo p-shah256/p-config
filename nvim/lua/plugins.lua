@@ -11,3 +11,4 @@ vim.keymap.set({ 'n', 't' }, '<leader>sj', fzf.jumps, { desc = '[s]earch [j]umps
 vim.keymap.set({ 'n', 't' }, '<leader>so', fzf.lsp_document_symbols, { desc = '[s]earch lsp [o]bjects' })
 vim.keymap.set({ 'n', 't' }, '<leader>sh', fzf.helptags, { desc = '[s]earch [h]elp tags' })
 vim.keymap.set({ 'n', 't' }, '<leader>sm', fzf.helptags, { desc = '[s]earch [m]arks' })
+vim.keymap.set({ 'n', 't' }, '<leader>sb', fzf.blines, { desc = '[s]earch [b]uffer' })

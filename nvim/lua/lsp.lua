@@ -22,4 +22,9 @@ vim.lsp.config['lua_ls'] = {
 }
 vim.lsp.enable('lua_ls')
 
-
+vim.lsp.config['pyrefly'] = {
+	cmd = { 'pyrefly', 'lsp' },
+	filetypes = { 'python' },
+	root_markers = { 'pyrefly.toml', 'pyproject.toml', '.git' },
+}
+vim.lsp.enable('pyrefly')

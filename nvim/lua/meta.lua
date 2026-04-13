@@ -55,11 +55,6 @@ vim.keymap.set('n', '<leader>sg', '<cmd>Zbg<cr>', { desc = '[s]earch [g]rep' })
 vim.pack.add({ 'https://github.com/neovim/nvim-lspconfig' })
 vim.opt.rtp:prepend('/usr/share/fb-editor-support/nvim')
 
--- vim.lsp.config('pyrefly', {
--- 	cmd = { 'pyrefly', 'lsp' },
--- 	filetypes = { 'python', 'configerator', 'tupperware' },
--- 	root_markers = { 'pyrefly.toml', 'pyproject.toml', 'setup.py', '.buckconfig' },
--- })
 vim.lsp.enable({
 	-- 'pyrefly',            -- Pyrefly type checker
 	'rust-analyzer@meta', -- Rust - Run :RustAnalyzerReload on TARGETS changes
@@ -74,6 +69,15 @@ vim.lsp.enable({
 	'hhvm',               -- Hack
 	'linttool@meta',      -- Linting and formatting
 })
-function VCS_CMD(file)
+function VCS_DIFF_FILE(file)
 	return { 'sl', 'cat', '-r', '.^', file }
 end
+function VCS_DIFF_FILES()
+	return { "sl", "status" }
+end
+function VCS_HUNKS()
+	return { "sl", "diff", "-U0" } -- adding (--change .) would give committed changes
+end
+
+-- configerator shouls use python parsers, decorators, folds, etc
+vim.treesitter.language.register("python", "configerator")

@@ -32,3 +32,6 @@ vim.opt.listchars = {
 }
 -- vim.o.pumborder = 'rounded'
 vim.opt.fixendofline = false
+vim.o.foldtext = ""
+
+
