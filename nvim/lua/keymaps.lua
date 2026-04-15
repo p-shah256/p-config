@@ -21,22 +21,48 @@ vim.keymap.set("n", "-", function()
 	end
 end, { desc = "Open netrw" })
 
--- TODO: if a pair is back to back, delete should delete both
--- if next to a word, add only one
-vim.keymap.set("i", "(", "(" .. ")" .. "<Left>", { noremap = true, silent = true })
-vim.keymap.set("i", "[", "[" .. "]" .. "<Left>", { noremap = true, silent = true })
-vim.keymap.set("i", "{", "{" .. "}" .. "<Left>", { noremap = true, silent = true })
-vim.keymap.set("i", '"', '"' .. '"' .. "<Left>", { noremap = true, silent = true })
-vim.keymap.set("i", "`", "`" .. "`" .. "<Left>", { noremap = true, silent = true })
-vim.keymap.set("i", "'", "'" .. "'" .. "<Left>", { noremap = true, silent = true })
+-- AUTOPAIRS
+local autopairs = { ["("] = ")", ["["] = "]", ["{"] = "}", ['"'] = '"', ["`"] = "`", ["'"] = "'", ["<"] = ">" }
+local t = vim.api.nvim_replace_termcodes
+local bs_del = t("<BS><Del>", true, false, true)
+local bs = t("<BS>", true, false, true)
+for open, close in pairs(autopairs) do
+	local pair_keys = t(open .. close .. "<Left>", true, false, true)
+	vim.keymap.set("i", open, function()
+		vim.api.nvim_feedkeys(pair_keys, "n", false)
+	end, { noremap = true, silent = true })
+end
+vim.keymap.set("i", "<BS>", function()
+	local line = vim.api.nvim_get_current_line()
+	local _, col = unpack(vim.api.nvim_win_get_cursor(0))
+	if autopairs[line:sub(col, col)] == line:sub(col + 1, col + 1) then
+		vim.api.nvim_feedkeys(bs_del, "n", false)
+	else
+		vim.api.nvim_feedkeys(bs, "n", false)
+	end
+end, { noremap = true, silent = true })
 
 vim.keymap.set("i", "<C-k>", vim.lsp.buf.signature_help, { desc = "signature_help while filling in function args" })
 
 vim.keymap.set("n", "<C-j>", "<cmd>keepjumps cnext<CR>")
 vim.keymap.set("n", "<C-k>", "<cmd>keepjumps cprev<CR>")
 
-vim.keymap.set('n', '*', function()
-  vim.cmd 'keepjumps normal! mi*`i'
-end, { desc = 'Search word under cursor without jumping', noremap = true, silent = true })
+vim.keymap.set("n", "*", function()
+	vim.cmd("keepjumps normal! mi*`i")
+end, { desc = "Search word under cursor without jumping", noremap = true, silent = true })
 
-
+vim.keymap.set("v", "s", function()
+	local char = vim.fn.getcharstr()
+	local end_char = char
+	local pairs = {
+		["("] = ")",
+		["["] = "]",
+		["{"] = "}",
+		["<"] = ">",
+	}
+	if pairs[char] then
+		end_char = pairs[char]
+	end
+	local keys = vim.api.nvim_replace_termcodes("c" .. char .. end_char .. "<Esc>P", true, false, true)
+	vim.api.nvim_feedkeys(keys, "n", false)
+end, { desc = "surround selection with a char" })

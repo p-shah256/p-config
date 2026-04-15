@@ -1,3 +1,6 @@
+-- --------------------------------------------------------------------------------
+-- TREESITTER
+-- --------------------------------------------------------------------------------
 -- pulls parsers from github and builds them
 -- just run this to install all parsers
 -- cd $(mktemp -d) && git clone git@github.com:nvim-treesitter/nvim-treesitter.git
@@ -54,89 +57,60 @@ vim.api.nvim_create_autocmd("FileType", {
 		pcall(vim.treesitter.start, ev.buf)
 	end,
 })
--- end Treesitter
--- LSP
--- vim.api.nvim_create_autocmd('LspAttach', {
--- 	callback = function(event)
--- 		local client = vim.lsp.get_client_by_id(event.data.client_id)
--- 		if not client:supports_method('textDocument/completion') then
--- 			return
--- 		end
--- 		vim.bo[event.buf].autocomplete = false
--- 		local chars = vim.split('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_', '')
--- 		local caps = client.server_capabilities or {}
--- 		local provider = caps.completionProvider or {}
--- 		local existing = provider.triggerCharacters or {}
--- 		for _, c in ipairs(chars) do existing[#existing + 1] = c end
--- 		provider.triggerCharacters = existing
--- 		caps.completionProvider = provider
--- 		vim.lsp.completion.enable(true, event.data.client_id, event.buf, { autotrigger = true })
--- 		vim.b[event.buf]._lsp_completion = true -- something breaks on removing this
--- 	end
--- })
--- is replaced by vim.o.autocompelete = true
--- vim.api.nvim_create_autocmd('TextChangedI', {
--- 	callback = function()
--- 		-- Skip special buffers (Telescope, command line, etc.) and LSP-enabled buffers
--- 		if vim.bo.buftype ~= '' then return end
--- 		if vim.b._lsp_completion then return end
--- 		if vim.fn.pumvisible() == 1 then return end
--- 		local col = vim.fn.col '.' - 1
--- 		if col < 3 then return end
--- 		local line = vim.api.nvim_get_current_line()
--- 		local before = line:sub(col - 2, col)
--- 		if before:match '%w%w%w$' then
--- 			local keys = vim.api.nvim_replace_termcodes('<C-x><C-n>', true, false, true)
--- 			vim.api.nvim_feedkeys(keys, 'm', false)
--- 		end
--- 	end,
--- })
 
--- vim.lsp.completion.enable only triggers for triggerCharacters. if we would want to trigger it for all chars
--- then we can add to the triggerCharacters as follows
---   local chars = vim.split('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_', '')
---   local caps = client.server_capabilities or {}
---   local provider = caps.completionProvider or {}
---   local existing = provider.triggerCharacters or {}
---   for _, c in ipairs(chars) do existing[#existing + 1] = c end
---   provider.triggerCharacters = existing
--- we would also need to disable vim.o.autocomplete (triggers automatically) as they would both race to show their popups.
--- so instead of doing that, vim.o.autocomplete supports omnicomplete, where we can route
--- lsp completions into thru omnifunc alongside completion sources
--- the only (current) limitation is there is no way to gurantee lsp completions get the first few seats before anything else.
-vim.api.nvim_create_autocmd("LspAttach", {
-	callback = function(ev)
-		local client = vim.lsp.get_client_by_id(ev.data.client_id)
-		if client ~= nil and client:supports_method("textDocument/completion") then
-			-- vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true })
-			vim.bo[ev.buf].complete = "o^10,.^5,w^3"
+-- --------------------------------------------------------------------------------
+-- TREESITTER CONTEXT
+-- --------------------------------------------------------------------------------
+
+local context_types = {
+	function_definition = true, function_declaration = true,
+	method_definition = true, method_declaration = true,
+	class_definition = true, class_declaration = true,
+	if_statement = true, elif_clause = true, else_clause = true,
+	for_statement = true, for_in_statement = true,
+	while_statement = true, with_statement = true,
+	try_statement = true, except_clause = true,
+	match_statement = true, case_clause = true,
+}
+
+local function get_context(node)
+	local parts = {}
+	while node do
+		if context_types[node:type()] then
+			local line = vim.api.nvim_buf_get_lines(0, node:start(), node:start() + 1, false)[1]
+			table.insert(parts, 1, vim.trim(line))
 		end
+		node = node:parent()
+	end
+	return table.concat(parts, " > ")
+end
+
+vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+	callback = function(ev)
+		if vim.api.nvim_buf_line_count(ev.buf) > 5000 then
+			return
+		end
+		local node = vim.treesitter.get_node()
+		if not node then
+			vim.wo.winbar = ""
+			return
+		end
+		vim.wo.winbar = get_context(node)
 	end,
 })
 
--- COPY PATH
-vim.api.nvim_create_user_command("CopyPath", function(opts)
-	local path = vim.fn.expand("%:p")
-	if opts.range > 0 then
-		if opts.line1 == opts.line2 then
-			path = path .. ":" .. opts.line1
-		else
-			path = path .. ":" .. opts.line1 .. "-" .. opts.line2
-		end
-	end
-	vim.fn.setreg("+", path)
-	vim.notify("Copied: " .. path)
-end, { range = true })
-vim.keymap.set("n", "<leader>cp", "<cmd>CopyPath<cr>", { desc = "Copy path" })
-vim.keymap.set("v", "<leader>cp", ":CopyPath<cr>", { desc = "Copy path with lines" })
-
+-- --------------------------------------------------------------------------------
 -- ILLUMINATE
+-- --------------------------------------------------------------------------------
 local ns_id = vim.api.nvim_create_namespace("illuminate")
+
 vim.api.nvim_set_hl(0, "illuminate", { underline = true })
+
 local function clear(bufnr)
 	vim.lsp.buf.clear_references()
 	vim.api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
 end
+
 local function highlight(bufnr)
 	clear(bufnr)
 	-- if lsp supports
@@ -185,18 +159,65 @@ local function highlight(bufnr)
 	end
 	walk(root)
 end
+
 vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
 	callback = function(ev)
 		highlight(ev.buf)
 	end,
 })
+
 vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI", "BufLeave" }, {
 	callback = function(ev)
 		clear(ev.buf)
 	end,
 })
 
+-- --------------------------------------------------------------------------------
+-- LSP COMPLETIONS
+-- --------------------------------------------------------------------------------
+-- vim.lsp.completion.enable only triggers for triggerCharacters. if we would want to trigger it for all chars
+-- then we can add to the triggerCharacters as follows
+--   local chars = vim.split('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_', '')
+--   local caps = client.server_capabilities or {}
+--   local provider = caps.completionProvider or {}
+--   local existing = provider.triggerCharacters or {}
+--   for _, c in ipairs(chars) do existing[#existing + 1] = c end
+--   provider.triggerCharacters = existing
+-- we would also need to disable vim.o.autocomplete (triggers automatically) as they would both race to show their popups.
+-- so instead of doing that, vim.o.autocomplete supports omnicomplete, where we can route
+-- lsp completions into thru omnifunc alongside completion sources
+-- the only (current) limitation is there is no way to gurantee lsp completions get the first few seats before anything else.
+vim.api.nvim_create_autocmd("LspAttach", {
+	callback = function(ev)
+		local client = vim.lsp.get_client_by_id(ev.data.client_id)
+		if client ~= nil and client:supports_method("textDocument/completion") then
+			-- vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true })
+			vim.bo[ev.buf].complete = "o^10,.^5,w^3"
+		end
+	end,
+})
+
+-- --------------------------------------------------------------------------------
+-- COPY PATH
+-- --------------------------------------------------------------------------------
+vim.api.nvim_create_user_command("CopyPath", function(opts)
+	local path = vim.fn.expand("%:p")
+	if opts.range > 0 then
+		if opts.line1 == opts.line2 then
+			path = path .. ":" .. opts.line1
+		else
+			path = path .. ":" .. opts.line1 .. "-" .. opts.line2
+		end
+	end
+	vim.fn.setreg("+", path)
+	vim.notify("Copied: " .. path)
+end, { range = true })
+vim.keymap.set("n", "<leader>cp", "<cmd>CopyPath<cr>", { desc = "Copy path" })
+vim.keymap.set("v", "<leader>cp", ":CopyPath<cr>", { desc = "Copy path with lines" })
+
+-- --------------------------------------------------------------------------------
 -- SIGNIFY: GUTTER SIGNS + DIFF VIEW
+-- --------------------------------------------------------------------------------
 -- TODO: instaed of a gutter,
 -- just chanage the color of the line number to show a change?
 -- like it can be red for deletions, and green for additions, blue for changes
@@ -354,9 +375,58 @@ vim.api.nvim_create_user_command("Diff", function(opts)
 	vim.cmd("tabnew")
 	vim.system(cmd, { text = true }, vim.schedule_wrap(populate_qfix))
 end, { nargs = "?" })
+<<<<<<< HEAD
 -- SIGNIFY end
 
+=======
+
+-- --------------------------------------------------------------------------------
+-- FORMATTER
+-- --------------------------------------------------------------------------------
+local formatters_by_ft = {
+	lua = { "stylua", "-" },
+	sh = { vim.fn.expand("~/go/bin/shfmt") },
+	bash = { vim.fn.expand("~/go/bin/shfmt") },
+}
+
+vim.keymap.set("n", "<leader>f", function()
+	-- Prefer CLI formatter if configured for this filetype
+	local cmd = formatters_by_ft[vim.bo.filetype]
+	if cmd and vim.fn.executable(cmd[1]) == 1 then
+		local buf = vim.api.nvim_get_current_buf()
+		local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+		local input = table.concat(lines, "\n") .. "\n"
+		vim.system(cmd, { stdin = input }, function(result)
+			vim.schedule(function()
+				if result.code ~= 0 then
+					vim.notify("Formatter failed: " .. (result.stderr or ""), vim.log.levels.ERROR)
+					return
+				end
+				local formatted = vim.split(result.stdout, "\n")
+				if formatted[#formatted] == "" then
+					formatted[#formatted] = nil
+				end
+				vim.api.nvim_buf_set_lines(buf, 0, -1, false, formatted)
+				vim.notify("Formatted with " .. cmd[1]:match("[^/]+$"))
+			end)
+		end)
+		return
+	end
+	-- Fall back to LSP formatting
+	local clients = vim.lsp.get_clients({ bufnr = 0 })
+	for _, client in ipairs(clients) do
+		if client:supports_method("textDocument/formatting") then
+			vim.notify("Formatting with " .. client.name)
+			vim.lsp.buf.format({ async = true, name = client.name })
+			return
+		end
+	end
+	vim.notify("No formatter for " .. vim.bo.filetype, vim.log.levels.WARN)
+end, { desc = "[f]ormat buffer" })
+
+-- --------------------------------------------------------------------------------
 -- indent guides
+-- --------------------------------------------------------------------------------
 local function update_leadmultispace()
 	local sw = vim.bo.shiftwidth
 	if sw > 1 then
