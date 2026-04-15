@@ -202,7 +202,7 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI", "BufLeave" }, {
 -- like it can be red for deletions, and green for additions, blue for changes
 --
 -- TODO: same file history with qfixlist
--- also add dv in :DiffFiles command so insetad of just showing files, it can also show 
+-- also add dv in :DiffFiles command so insetad of just showing files, it can also show
 -- the changes
 local diff_ns = vim.api.nvim_create_namespace("diffs")
 -- returns the shell command to get the base version of a file (overridden in meta.lua for sapling)
@@ -351,17 +351,17 @@ vim.api.nvim_create_user_command("Diff", function(opts)
 		cmd[#cmd + 1] = "--change" -- TODO: not sure if this works in git
 		cmd[#cmd + 1] = opts.args
 	end
-	vim.cmd('tabnew')
+	vim.cmd("tabnew")
 	vim.system(cmd, { text = true }, vim.schedule_wrap(populate_qfix))
 end, { nargs = "?" })
 -- SIGNIFY end
-
 
 -- FORMATTER
 local formatters_by_ft = {
 	lua = { "stylua", "-" },
 	sh = { vim.fn.expand("~/go/bin/shfmt") },
 	bash = { vim.fn.expand("~/go/bin/shfmt") },
+	python = { "black", "-" },
 }
 
 vim.keymap.set("n", "<leader>f", function()
@@ -370,8 +370,8 @@ vim.keymap.set("n", "<leader>f", function()
 	if cmd and vim.fn.executable(cmd[1]) == 1 then
 		local buf = vim.api.nvim_get_current_buf()
 		local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-		local input = table.concat(lines, "\n") .. "\n"
-		vim.system(cmd, { stdin = input }, function(result)
+		local ilines = table.concat(lines, "\n") .. "\n"
+		vim.system(cmd, { stdin = ilines }, function(result)
 			vim.schedule(function()
 				if result.code ~= 0 then
 					vim.notify("Formatter failed: " .. (result.stderr or ""), vim.log.levels.ERROR)
@@ -399,7 +399,6 @@ vim.keymap.set("n", "<leader>f", function()
 	vim.notify("No formatter for " .. vim.bo.filetype, vim.log.levels.WARN)
 end, { desc = "[f]ormat buffer" })
 
-
 -- indent guides
 local function update_leadmultispace()
 	local sw = vim.bo.shiftwidth
@@ -407,7 +406,7 @@ local function update_leadmultispace()
 		vim.opt_local.listchars:append({ leadmultispace = "▏" .. string.rep(" ", sw - 1) })
 	end
 end
-vim.api.nvim_create_autocmd({ 'BufEnter', 'OptionSet' }, {
-	pattern = { '*', 'shiftwidth' },
+vim.api.nvim_create_autocmd({ "BufEnter", "OptionSet" }, {
+	pattern = { "*", "shiftwidth" },
 	callback = update_leadmultispace,
 })
