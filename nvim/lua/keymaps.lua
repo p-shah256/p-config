@@ -3,6 +3,7 @@ vim.keymap.set("n", "<Up>", "<C-w><C-k>", { noremap = true })
 vim.keymap.set("n", "<Down>", "<C-w><C-j>", { noremap = true })
 vim.keymap.set("n", "<Left>", "<C-w><C-h>", { noremap = true })
 vim.keymap.set("n", "<Right>", "<C-w><C-l>", { noremap = true })
+
 -- Prevent { and } paragraph motions from polluting the jumplist
 vim.keymap.set("n", "}", ':<C-u>execute "keepjumps norm! " . v:count1 . "}"<CR>', { silent = true })
 vim.keymap.set("n", "{", ':<C-u>execute "keepjumps norm! " . v:count1 . "{"<CR>', { silent = true })
@@ -33,3 +34,9 @@ vim.keymap.set("i", "<C-k>", vim.lsp.buf.signature_help, { desc = "signature_hel
 
 vim.keymap.set("n", "<C-j>", "<cmd>keepjumps cnext<CR>")
 vim.keymap.set("n", "<C-k>", "<cmd>keepjumps cprev<CR>")
+
+vim.keymap.set('n', '*', function()
+  vim.cmd 'keepjumps normal! mi*`i'
+end, { desc = 'Search word under cursor without jumping', noremap = true, silent = true })
+
+

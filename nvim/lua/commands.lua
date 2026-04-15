@@ -348,7 +348,7 @@ vim.api.nvim_create_user_command("Diff", function(opts)
 	end
 	local cmd = VCS_HUNKS()
 	if opts.args ~= "" then
-		cmd[#cmd + 1] = "--change"
+		cmd[#cmd + 1] = "--change" -- TODO: not sure if this works in git
 		cmd[#cmd + 1] = opts.args
 	end
 	vim.cmd('tabnew')

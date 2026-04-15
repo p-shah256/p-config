@@ -76,7 +76,7 @@ function VCS_DIFF_FILES()
 	return { "sl", "status" }
 end
 function VCS_HUNKS()
-	return { "sl", "diff", "-U0" } -- adding (--change .) would give committed changes
+	return { "sl", "diff", "-U0" } -- adding '--change .' would give committed changes
 end
 
 -- configerator shouls use python parsers, decorators, folds, etc
