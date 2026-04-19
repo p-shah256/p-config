@@ -5,8 +5,8 @@
 (require 'my-bootstrap)
 (require 'my-base)
 ;; TODO: this should be done with hostname so if on devserver use this,
-(when (file-directory-p (expand-file-name "~/fbsource/fbcode"))
-  (require 'my-meta nil t))
+(when (string-suffix-p ".facebook.com" (system-name))
+    (require 'my-meta nil t))
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
