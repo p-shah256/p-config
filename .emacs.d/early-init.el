@@ -2,6 +2,7 @@
 
 (setq package-enable-at-startup nil)
 (setq package-quickstart t)
+(setq load-prefer-newer t)
 (setq frame-inhibit-implied-resize t)
 (setq inhibit-compacting-font-caches t)
 (setq-default bidi-display-reordering 'left-to-right)
@@ -13,6 +14,10 @@
 (setq file-name-handler-alist nil)
 (setq gc-cons-threshold most-positive-fixnum)
 (setq gc-cons-percentage 0.6)
+
+;; Emacs 30 may not have whitespace faces interned until the library loads.
+;; Some themes reference them during startup, so load it before init.
+(require 'whitespace)
 
 (defun my-restore-startup-settings ()
   "Restore startup settings after init completes."

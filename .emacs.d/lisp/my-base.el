@@ -157,6 +157,9 @@
    (recentf-mode 1)
    (recentf-cleanup)))
 (my-run-with-idle 1.2 #'winner-mode)
+;; Doom themes customize whitespace faces during theme load.
+;; Ensure the built-in faces exist first on newer Emacs builds.
+(require 'whitespace)
 (my-run-with-idle 0.1 (lambda () (load-theme 'doom-feather-light t)))
 
 (setq treesit-extra-load-path

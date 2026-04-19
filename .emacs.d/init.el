@@ -5,8 +5,8 @@
 (require 'my-bootstrap)
 (require 'my-base)
 ;; TODO: this should be done with hostname so if on devserver use this,
-;; (when (file-directory-p (expand-file-name "~/fbsource/fbcode"))
-  ;; (require 'my-meta nil t))
+(when (file-directory-p (expand-file-name "~/fbsource/fbcode"))
+  (require 'my-meta nil t))
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
@@ -19,9 +19,12 @@
      "e1df746a4fa8ab920aafb96c39cd0ab0f1bac558eff34532f453bd32c687b9d6"
      default))
  '(package-selected-packages
-   '(ace-window cape consult corfu doom-themes f git-gutter
-                highlight-indent-guides magit marginalia orderless
-                vertico)))
+   '(ace-window cape company consult corfu-terminal deferred doom-themes
+                flycheck git git-gutter god-mode graphql hack-mode
+                highlight-indent-guides let-alist lsp-ui magit
+                magit-section marginalia modern-cpp-font-lock monky
+                orderless pabbrev thrift transient tuareg vdiff
+                vertico with-editor)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
