@@ -1,0 +1,27 @@
+#!/bin/bash
+# Python LSP wrapper using fb-pyright-ls from VS Code extension
+FBPKG_NODE="$(find /home/$USER/.vscode-fb-stable/extensions -name node -path '*/bin/node' 2>/dev/null | head -1)"
+if [ -z "$FBPKG_NODE" ]; then
+  FBPKG_NODE=/usr/local/bin/node
+fi
+vscode_ext_dir="/home/$USER/.vscode-fb-stable/extensions/"
+newest_ext="$(ls "$vscode_ext_dir" | grep nuclide.pyls | tail -n1)"
+PYLS_DIR="$vscode_ext_dir/$newest_ext"
+PYLS_MAIN="$PYLS_DIR/src/fb-pyright-ls-prebuild.js"
+TYPESHED="$PYLS_DIR/src/typeshed-fallback"
+GLEAN_PROXY="$PYLS_DIR/src/glean-server-proxy"
+>&2 echo "PYLS_MAIN: $PYLS_MAIN"
+
+export PYTHON_PATH=""
+export NODE_OPTIONS="--max-old-space-size=10240"
+
+cd "$PYLS_DIR" || exit 1
+$FBPKG_NODE "$PYLS_MAIN" \
+  --stdio \
+  --typeshedpath "$TYPESHED" \
+  --heuristics \
+  --python-version 3.10 \
+  --buck-async \
+  --enable-glean-support \
+  --glean-server-proxy-path "$GLEAN_PROXY" \
+  "$@"

@@ -1,0 +1,12 @@
+#!/bin/bash
+# From P1722009366 (Gary McElroy's working cppls wrapper)
+FBPKG_NODE=/usr/local/bin/node
+vscode_ext_dir="/home/$USER/.vscode-fb-stable/extensions/"
+newest_ext="$(ls "$vscode_ext_dir" | grep nuclide.cpp | tail -n1)"/
+CPPLS_MAIN="$vscode_ext_dir/$newest_ext/server/main.js"
+>&2 echo "CPPLS_MAIN: $CPPLS_MAIN"
+
+fbsource_dir="/home/${USER}/fbsource"
+fbcode_dir="$fbsource_dir/fbcode"
+cd "$fbcode_dir" || exit 1
+$FBPKG_NODE "$CPPLS_MAIN" /tmp "/tmp/${USER}-fb-clangd-log" "--ignoreMetaCustomAPI" "$@"
