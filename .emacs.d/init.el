@@ -17,6 +17,7 @@
      ("https" . "fwdproxy:8080")))
 
 (require 'package)
+(add-to-list 'package-archives '("gnu" . "https://elpa.gnu.org/packages/"))
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 (package-initialize)
 
@@ -367,6 +368,15 @@
 (autoload 'highlight-indent-guides-mode "highlight-indent-guides" nil t)
 (setq highlight-indent-guides-auto-enabled nil)
 
+(defun my-set-face-attrs-if-available (face &rest args)
+  "Apply ARGS to FACE when it is available.
+Some faces are not ready during early startup on every Emacs build, so this
+silently skips them instead of aborting init."
+  (when (facep face)
+    (condition-case nil
+        (apply #'set-face-attribute face nil args)
+      (error nil))))
+
 (defun my-apply-indent-faces (&rest _)
   "Keep indentation guides visible across theme changes."
   (let* ((dark-bg (eq (frame-parameter nil 'background-mode) 'dark))
@@ -380,45 +390,44 @@
          (stack (if graphic
                     (if dark-bg "#b0b0b0" "#666666")
                   (if dark-bg "color-252" "color-238"))))
-    (when (facep 'whitespace-indentation)
-      (set-face-attribute 'whitespace-indentation nil
-                          :inherit nil
-                          :foreground base
-                          :background 'unspecified))
+    (my-set-face-attrs-if-available 'whitespace-indentation
+                                    :inherit nil
+                                    :foreground base
+                                    :background 'unspecified)
     (if (featurep 'highlight-indent-guides)
         (progn
-          (set-face-attribute 'highlight-indent-guides-character-face nil
-                              :inherit nil
-                              :foreground base
-                              :background 'unspecified)
-          (set-face-attribute 'highlight-indent-guides-top-character-face nil
-                              :inherit nil
-                              :foreground top
-                              :background 'unspecified
-                              :weight 'bold)
-          (set-face-attribute 'highlight-indent-guides-stack-character-face nil
-                              :inherit nil
-                              :foreground stack
-                              :background 'unspecified)
+          (my-set-face-attrs-if-available 'highlight-indent-guides-character-face
+                                          :inherit nil
+                                          :foreground base
+                                          :background 'unspecified)
+          (my-set-face-attrs-if-available 'highlight-indent-guides-top-character-face
+                                          :inherit nil
+                                          :foreground top
+                                          :background 'unspecified
+                                          :weight 'bold)
+          (my-set-face-attrs-if-available 'highlight-indent-guides-stack-character-face
+                                          :inherit nil
+                                          :foreground stack
+                                          :background 'unspecified)
           (when (and (not graphic) dark-bg)
-            (set-face-attribute 'highlight-indent-guides-character-face nil
-                                :weight 'normal)
-            (set-face-attribute 'highlight-indent-guides-stack-character-face nil
-                                :weight 'bold)))
+            (my-set-face-attrs-if-available 'highlight-indent-guides-character-face
+                                            :weight 'normal)
+            (my-set-face-attrs-if-available 'highlight-indent-guides-stack-character-face
+                                            :weight 'bold)))
       (with-eval-after-load 'highlight-indent-guides
-        (set-face-attribute 'highlight-indent-guides-character-face nil
-                            :inherit nil
-                            :foreground base
-                            :background 'unspecified)
-        (set-face-attribute 'highlight-indent-guides-top-character-face nil
-                            :inherit nil
-                            :foreground top
-                            :background 'unspecified
-                            :weight 'bold)
-        (set-face-attribute 'highlight-indent-guides-stack-character-face nil
-                            :inherit nil
-                            :foreground stack
-                            :background 'unspecified)))))
+        (my-set-face-attrs-if-available 'highlight-indent-guides-character-face
+                                        :inherit nil
+                                        :foreground base
+                                        :background 'unspecified)
+        (my-set-face-attrs-if-available 'highlight-indent-guides-top-character-face
+                                        :inherit nil
+                                        :foreground top
+                                        :background 'unspecified
+                                        :weight 'bold)
+        (my-set-face-attrs-if-available 'highlight-indent-guides-stack-character-face
+                                        :inherit nil
+                                        :foreground stack
+                                        :background 'unspecified)))))
 
 (my-apply-indent-faces)
 (advice-add 'load-theme :after #'my-apply-indent-faces)
@@ -483,7 +492,9 @@
 (use-package orderless
   :ensure t
   :config
-  (setq completion-styles '(orderless basic)))
+  (setq completion-styles '(orderless basic)
+        completion-category-defaults nil
+        completion-category-overrides '((file (styles partial-completion basic)))))
 
 (use-package marginalia
   :ensure t
@@ -598,16 +609,7 @@
 (define-key minibuffer-local-map (kbd "M-{") #'my-scroll-preview-up)
 (define-key minibuffer-local-map (kbd "M-}") #'my-scroll-preview-down)
 
-(use-package company
-  :ensure t
-  :hook (prog-mode . company-mode)
-  :config
-  (setq company-idle-delay 0.5)
-  (setq company-minimum-prefix-length 3)
-  (setq company-frontends '(company-pseudo-tooltip-frontend
-                            company-preview-frontend
-                            company-echo-metadata-frontend))
-  (define-key company-active-map (kbd "C-h") #'company-show-doc-buffer))
+(load (expand-file-name "lisp/my-completion.el" user-emacs-directory) nil t)
 
 (setq-default indent-tabs-mode nil)
 (setq-default c-basic-offset 2)
@@ -617,6 +619,8 @@
 (defun my-load-fb-master ()
   "Load Meta-specific development helpers once."
   (unless my-fb-master-loaded
+    (setq fb-option-enable-company-commits nil
+          fb-option-global-company-mode nil)
     (when (require 'fb-master nil t)
       (setq my-fb-master-loaded t)
       (setq read-process-output-max (* 1024 1024))
@@ -709,7 +713,13 @@
      "4b88b7ca61eb48bb22e2a4b589be66ba31ba805860db9ed51b4c484f3ef612a7"
      "e1df746a4fa8ab920aafb96c39cd0ab0f1bac558eff34532f453bd32c687b9d6"
      default))
- '(package-selected-packages nil))
+ '(package-selected-packages
+   '(ace-window cape company consult corfu corfu-terminal deferred
+                doom-themes flycheck git git-gutter god-mode graphql
+                hack-mode highlight-indent-guides let-alist lsp-ui
+                magit-section marginalia modern-cpp-font-lock monky
+                orderless pabbrev thrift transient tuareg vdiff
+                vertico with-editor)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
