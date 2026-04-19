@@ -12,9 +12,10 @@
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 (package-initialize)
 
-(unless (package-installed-p 'use-package)
+(when (seq-some (lambda (pkg) (not (package-installed-p pkg)))
+                package-selected-packages)
   (package-refresh-contents)
-  (package-install 'use-package))
+  (package-install-selected-packages t))
 
 (provide 'my-bootstrap)
 

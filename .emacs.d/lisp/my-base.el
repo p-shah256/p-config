@@ -13,6 +13,7 @@
 
 ;;; Sane Defaults for Vanilla Emacs
 ;; 1. User Interface Tweaks
+(set-face-attribute 'default nil :family "Menlo" :height 160)
 (setq inhibit-startup-message t)
 (setq vc-handled-backends nil)
 (tool-bar-mode -1)
@@ -38,8 +39,6 @@
     (display-line-numbers-mode 1)))
 
 ;; 2. Display & Formatting Settings
-(add-hook 'prog-mode-hook #'my-enable-line-numbers-maybe)
-(add-hook 'conf-mode-hook #'my-enable-line-numbers-maybe)
 (column-number-mode 1)
 (show-paren-mode 1)
 (global-font-lock-mode 1)
@@ -188,21 +187,27 @@
     (message "Base open: %.3fs | font-lock: %.3fs | git-gutter+eglot+rest: %.3fs | TOTAL: %.3fs"
              (- t1 t0) (- t2 t1) (- t3 t2) (- t3 t0))))
 
-(defvar my-treesit-mode-remap
-  '((c . (c-mode . c-ts-mode))
-    (cpp . (c++-mode . c++-ts-mode))
-    (python . (python-mode . python-ts-mode))
-    (bash . (sh-mode . bash-ts-mode))
-    (go . (go-mode . go-ts-mode))
-    (rust . (rust-mode . rust-ts-mode))
-    (java . (java-mode . java-ts-mode))
-    (javascript . (javascript-mode . js-ts-mode))
-    (json . (json-mode . json-ts-mode))
-    (yaml . (yaml-mode . yaml-ts-mode))
-    (toml . (conf-toml-mode . toml-ts-mode))))
+(setq my-treesit-mode-remap
+  '(((c cpp) . (c-mode . c-ts-mode))
+    ((cpp) . (c++-mode . c++-ts-mode))
+    ((python) . (python-mode . python-ts-mode))
+    ((bash) . (sh-mode . bash-ts-mode))
+    ((go) . (go-mode . go-ts-mode))
+    ((rust) . (rust-mode . rust-ts-mode))
+    ((java) . (java-mode . java-ts-mode))
+    ((javascript) . (javascript-mode . js-ts-mode))
+    ((json) . (json-mode . json-ts-mode))
+    ((yaml) . (yaml-mode . yaml-ts-mode))
+    ((toml) . (conf-toml-mode . toml-ts-mode))))
+
+(defun my-treesit-languages-ready-p (languages)
+  "Return non-nil when every language in LANGUAGES is available for tree-sitter."
+  (seq-every-p #'treesit-language-available-p languages))
 
 (dolist (entry my-treesit-mode-remap)
-  (when (treesit-language-available-p (car entry))
+  (setq major-mode-remap-alist
+        (assq-delete-all (car (cdr entry)) major-mode-remap-alist))
+  (when (my-treesit-languages-ready-p (car entry))
     (add-to-list 'major-mode-remap-alist (cdr entry))))
 
 ;;; Treesitter Context
@@ -447,13 +452,14 @@
 (defun my-enable-indent-guides-maybe ()
   "Enable visible indent guides in small local code buffers."
   (unless (my-heavy-ui-buffer-p)
-    (my-apply-indent-faces)
-    (setq-local highlight-indent-guides-responsive 'top)
-    (if (display-graphic-p)
-        (setq-local highlight-indent-guides-method 'bitmap)
-      (setq-local highlight-indent-guides-method 'character)
-      (setq-local highlight-indent-guides-character ?|))
-    (highlight-indent-guides-mode 1)))
+    (when (require 'highlight-indent-guides nil 'noerror)
+      (my-apply-indent-faces)
+      (setq-local highlight-indent-guides-responsive 'top)
+      (if (display-graphic-p)
+          (setq-local highlight-indent-guides-method 'bitmap)
+        (setq-local highlight-indent-guides-method 'character)
+        (setq-local highlight-indent-guides-character ?|))
+      (highlight-indent-guides-mode 1))))
 
 (defun my-enable-git-gutter-maybe ()
   "Enable change markers only in small local code buffers."
@@ -467,6 +473,10 @@
 
 (add-hook 'prog-mode-hook #'hs-minor-mode)
 (setq hs-hide-comments-when-hiding-all nil)
+
+(use-package highlight-indent-guides
+  :ensure t
+  :commands (highlight-indent-guides-mode))
 
 (use-package f :ensure t :defer t)
 (use-package vertico :ensure t :init (vertico-mode))
@@ -531,7 +541,7 @@
 (require 'my-completion)
 
 (use-package magit
-  :if (locate-library "magit")
+  :ensure t
   :bind ("C-c g" . magit-status))
 
 (use-package git-gutter
@@ -539,6 +549,10 @@
   :bind (("C-c n" . git-gutter:next-hunk)
          ("C-c p" . git-gutter:previous-hunk))
   :hook (prog-mode . my-enable-git-gutter-maybe))
+
+;; Register this late so line numbers come up before optional UI hooks.
+(add-hook 'prog-mode-hook #'my-enable-line-numbers-maybe)
+(add-hook 'conf-mode-hook #'my-enable-line-numbers-maybe)
 
 (defun my-scroll-preview-up ()
   (interactive)
