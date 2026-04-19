@@ -31,8 +31,6 @@
   (add-hook 'completion-at-point-functions #'cape-file t t)
   (add-hook 'completion-at-point-functions #'cape-dabbrev t t))
 
-(add-hook 'prog-mode-hook #'my-prog-completion-setup)
-
 (provide 'my-completion)
 
 ;;; my-completion.el ends here
