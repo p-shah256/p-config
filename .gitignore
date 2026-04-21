@@ -9,7 +9,6 @@ data
 nvim/lua/plugins/meta.lua
 .claude
 bash/setup-meta.sh
-
 *.elc
 *.eln
 .emacs.d/eln-cache/
@@ -25,7 +24,7 @@ bash/setup-meta.sh
 .emacs.d/.lsp-session-v1
 .emacs.d/ielm-history.eld
 .emacs.d/tree-sitter/*.so
-
+*maple.sl
 *~
 #*#
 .#*

@@ -4,6 +4,8 @@
 
 (require 'cl-lib)
 (require 'subr-x)
+(require 'consult)
+(require 'my-cli-transient)
 
 (setq url-proxy-services
       '(("no_proxy" . "^\\(localhost\\|10.*\\)")
@@ -36,6 +38,7 @@
 
 ;; Load Meta's emacs packages directly from fbsource
 (add-to-list 'load-path "~/fbsource/fbcode/emacs_config/emacs-packages")
+(add-to-list 'load-path "~/fbsource/users/sh/shah256/emacs")
 (with-eval-after-load 'tramp
   (require 'tramp-utl nil t))
 
@@ -62,8 +65,12 @@
 
 (global-set-key (kbd "C-c f") #'my-myles-consult)
 
-;; BigGrep via consult (xbgr = regex, xbgs = string, xbgf = filename)
+;; BigGrep via consult (zbgr = regex, zbgs = string, zbgf = filename)
 (defvar my-biggrep-history nil)
+
+(defalias 'my-zbgr-transient
+  (my-cli-transient-make-command "zbgr")
+  "Open the JSON-backed transient for zbgr.")
 
 (defun my--biggrep-builder (cmd)
   "Return a builder function for BigGrep CMD."
@@ -71,7 +78,7 @@
     (pcase-let ((`(,arg . ,opts) (consult--command-split input)))
       (when (>= (length arg) 3)
         (cons (list "bash" "-c"
-                    (format "%s -s -n 50 %s -- %s | perl -pe 's/^([^:]*):([0-9]+):[0-9]+:/$1\\x00$2:/'"
+                    (format "%s -n 50 %s -- %s | perl -pe 's/^([^:]*):([0-9]+):[0-9]+:/$1\\x00$2:/'"
                             cmd
                             (string-join opts " ")
                             (shell-quote-argument arg)))
@@ -80,7 +87,7 @@
 
 (defun my--biggrep-consult (cmd prompt)
   "Run a BigGrep CMD with consult async and preview."
-  (let* ((default-directory (expand-file-name "~/fbsource/"))
+  (let* ((default-directory (expand-file-name "~/"))
          (builder (my--biggrep-builder cmd)))
     (consult--read
      (consult--process-collection builder
@@ -93,24 +100,26 @@
      :history '(:input my-biggrep-history)
      :sort nil)))
 
-(defun my-xbgr-consult ()
+(defun my-zbgr-consult ()
   "Search fbsource with BigGrep regex via consult."
   (interactive)
-  (my--biggrep-consult "xbgr" "BigGrep (regex): "))
+  (my--biggrep-consult "zbgr" "BigGrep (regex): "))
 
-(defun my-xbgs-consult ()
+(defun my-zbgs-consult ()
   "Search fbsource with BigGrep string match via consult."
   (interactive)
-  (my--biggrep-consult "xbgs" "BigGrep (string): "))
+  (my--biggrep-consult "zbgs" "BigGrep (string): "))
 
-(defun my-xbgf-consult ()
+(defun my-zbgf-consult ()
   "Search fbsource filenames with BigGrep via consult."
   (interactive)
-  (let* ((default-directory (expand-file-name "~/fbsource/"))
+  (let* ((default-directory (expand-file-name "~/"))
          (builder (lambda (input)
                     (pcase-let ((`(,arg . ,opts) (consult--command-split input)))
                       (when (>= (length arg) 3)
-                        (list "xbgf" "-s" "-n" "50" arg)))))
+                        (list "bash" "-c"
+                              (format "zbgf -n 50 %s | perl -pe 's{^configerator-a/}{configerator/}; s{:[0-9]+:[0-9]+:.*$}{};'"
+                                      (shell-quote-argument arg)))))))
          (result
           (consult--read
            (consult--process-collection builder :file-handler t)
@@ -120,11 +129,16 @@
            :history '(:input my-biggrep-history)
            :sort nil)))
     (when result
-      (find-file (car (split-string result ":" t))))))
+      (find-file result))))
 
-(global-set-key (kbd "C-c /") #'my-xbgr-consult)
-(global-set-key (kbd "C-c .") #'my-xbgs-consult)
-(global-set-key (kbd "C-c ,") #'my-xbgf-consult)
+(defalias 'my-xbgr-consult #'my-zbgr-consult)
+(defalias 'my-xbgs-consult #'my-zbgs-consult)
+(defalias 'my-xbgf-consult #'my-zbgf-consult)
+
+(global-set-key (kbd "C-c /") #'my-zbgr-consult)
+(global-set-key (kbd "C-c .") #'my-zbgs-consult)
+(global-set-key (kbd "C-c ,") #'my-zbgf-consult)
+(global-set-key (kbd "C-c z") #'my-zbgr-transient)
 
 (require 'my-meta-completion)
 
@@ -164,6 +178,9 @@
     (expand-file-name "~/.emacs.d/bin/cppls-wrapper"))
   (my-eglot-set-server my-eglot-cpp-modes
                        `(eglot-fb-cppls ,cppls-wrapper))
+  (when (executable-find "fbgo")
+    (my-eglot-set-server my-eglot-go-modes
+                         '("fbgo" "adapter" "gopls" "--" "serve")))
   (defvar pyls-wrapper
     (expand-file-name "~/.emacs.d/bin/pyls-wrapper"))
   (my-eglot-set-server my-eglot-python-modes

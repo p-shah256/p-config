@@ -191,6 +191,10 @@
         (assq-delete-all (car (cdr entry)) major-mode-remap-alist))
   (when (my-treesit-languages-ready-p (car entry))
     (add-to-list 'major-mode-remap-alist (cdr entry))))
+
+(when (and (fboundp 'go-ts-mode)
+           (my-treesit-languages-ready-p '(go)))
+  (add-to-list 'auto-mode-alist '("\\.go\\'" . go-ts-mode)))
 (autoload 'my-benchmark-open "my-prog-extras" nil t)
 (autoload 'my-enable-ts-context-maybe "my-prog-extras" nil t)
 (autoload 'ts-context-mode "my-prog-extras" nil t)
@@ -207,16 +211,14 @@
 (global-set-key [C--] #'undo)
 
 (defun copy-file-location ()
-  "Copy file:line or file:linestart-lineend to kill ring."
+  "Copy file path, or file:linestart-lineend when a region is active."
   (interactive)
   (let ((loc (if (use-region-p)
                  (format "%s:%d-%d"
                          (buffer-file-name)
                          (line-number-at-pos (region-beginning))
                          (line-number-at-pos (region-end)))
-               (format "%s:%d"
-                       (buffer-file-name)
-                       (line-number-at-pos)))))
+               (buffer-file-name))))
     (kill-new loc)
     (message "%s" loc)))
 
@@ -329,6 +331,7 @@
 (use-package consult
   :ensure t
   :bind ("C-x b" . consult-buffer)
+  :bind ("C-c r" . consult-recent-file)
   :config
   (setq consult-preview-key '(:debounce 0.2 any)))
 
@@ -354,6 +357,9 @@
 (defconst my-eglot-cpp-modes '(c++-mode c++-ts-mode c-mode c-ts-mode)
   "C-family major modes managed through Eglot.")
 
+(defconst my-eglot-go-modes '(go-mode go-ts-mode)
+  "Go major modes managed through Eglot.")
+
 (defconst my-eglot-python-modes '(python-mode python-ts-mode)
   "Python major modes managed through Eglot.")
 
@@ -375,7 +381,7 @@
 (defalias 'my-eglot-register-server #'my-eglot-set-server)
 
 (apply #'my-eglot-enable-modes
-       (append my-eglot-cpp-modes my-eglot-python-modes))
+       (append my-eglot-cpp-modes my-eglot-go-modes my-eglot-python-modes))
 
 (when (executable-find "clangd")
   (my-eglot-set-server my-eglot-cpp-modes '("clangd" "--background-index")))
@@ -403,8 +409,9 @@
          ("C-c p" . git-gutter:previous-hunk))
   :hook (prog-mode . my-enable-git-gutter-maybe))
 
-;; Register this late so line numbers come up before optional UI hooks.
-(dolist (hook '(prog-mode-hook conf-mode-hook))
+;; Register this late so file-visiting buffers also get line numbers even when
+;; they fall back to `fundamental-mode` and never enter prog/conf hooks.
+(dolist (hook '(prog-mode-hook conf-mode-hook find-file-hook))
   (add-hook hook #'my-enable-line-numbers-maybe))
 
 (defun my-scroll-preview-up ()
