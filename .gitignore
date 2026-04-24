@@ -30,3 +30,4 @@ bash/setup-meta.sh
 .#*
 package-quickstart.el
 package-quickstart.elc
+*elpa*
