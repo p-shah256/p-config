@@ -447,5 +447,5 @@
 ;; TODO: not sure why
 ;; Required for doom-themes
 (use-package f :ensure t :defer t)
-
+(require 'sapling)
 (provide 'base)
