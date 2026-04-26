@@ -375,10 +375,7 @@ vim.api.nvim_create_user_command("Diff", function(opts)
 	vim.cmd("tabnew")
 	vim.system(cmd, { text = true }, vim.schedule_wrap(populate_qfix))
 end, { nargs = "?" })
-<<<<<<< HEAD
 -- SIGNIFY end
-
-=======
 
 -- --------------------------------------------------------------------------------
 -- FORMATTER

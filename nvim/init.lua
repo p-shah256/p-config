@@ -3,4 +3,7 @@ require('keymaps')
 require('lsp')
 require('commands')
 require('plugins')
-require('meta')
+require('sapling')
+if vim.fn.hostname():match("%.facebook%.com$") then
+  require('meta')
+end

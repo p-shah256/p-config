@@ -1,3 +1,5 @@
+-- things to install
+-- clangd lua-language-server gopls pyrefly black shftmt stylua
 vim.lsp.config["lua_ls"] = {
 	-- Command and arguments to start the server.
 	cmd = { "lua-language-server" },
@@ -28,6 +30,14 @@ vim.lsp.config["pyrefly"] = {
 	root_markers = { "pyrefly.toml", "pyproject.toml", ".git" },
 }
 vim.lsp.enable("pyrefly")
+
+vim.lsp.config["clangd"] = {
+	cmd = { "clangd" },
+	filetypes = { "c", "cpp" },
+	root_markers = { "compile_commands.json", "compile_flags.txt", ".git" },
+}
+vim.lsp.enable("clangd")
+
 
 -- FORMATTER
 local formatters_by_ft = {

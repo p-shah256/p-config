@@ -1,5 +1,6 @@
 vim.pack.add({
 	"https://github.com/ibhagwan/fzf-lua",
+	"https://github.com/tpope/vim-fugitive"
 })
 local fzf = require("fzf-lua")
 fzf.setup({

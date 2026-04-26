@@ -51,6 +51,7 @@ vim.keymap.set("n", "*", function()
 	vim.cmd("keepjumps normal! mi*`i")
 end, { desc = "Search word under cursor without jumping", noremap = true, silent = true })
 
+-- TODO: not a fan of this, ideally you should be able to surround with anything right?
 vim.keymap.set("v", "s", function()
 	local char = vim.fn.getcharstr()
 	local end_char = char
