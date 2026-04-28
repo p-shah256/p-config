@@ -41,6 +41,16 @@ vim.keymap.set("i", "<BS>", function()
 		vim.api.nvim_feedkeys(bs, "n", false)
 	end
 end, { noremap = true, silent = true })
+-- TODO: not a fan of this, ideally you should be able to surround with anything right?
+vim.keymap.set("v", "s", function()
+	local char = vim.fn.getcharstr()
+	local end_char = char
+	if autopairs[char] then
+		end_char = autopairs[char]
+	end
+	local keys = t("c" .. char .. end_char .. "<Esc>P", true, false, true)
+	vim.api.nvim_feedkeys(keys, "n", false)
+end, { desc = "surround selection with a char" })
 
 vim.keymap.set("i", "<C-k>", vim.lsp.buf.signature_help, { desc = "signature_help while filling in function args" })
 
@@ -51,19 +61,3 @@ vim.keymap.set("n", "*", function()
 	vim.cmd("keepjumps normal! mi*`i")
 end, { desc = "Search word under cursor without jumping", noremap = true, silent = true })
 
--- TODO: not a fan of this, ideally you should be able to surround with anything right?
-vim.keymap.set("v", "s", function()
-	local char = vim.fn.getcharstr()
-	local end_char = char
-	local pairs = {
-		["("] = ")",
-		["["] = "]",
-		["{"] = "}",
-		["<"] = ">",
-	}
-	if pairs[char] then
-		end_char = pairs[char]
-	end
-	local keys = vim.api.nvim_replace_termcodes("c" .. char .. end_char .. "<Esc>P", true, false, true)
-	vim.api.nvim_feedkeys(keys, "n", false)
-end, { desc = "surround selection with a char" })
