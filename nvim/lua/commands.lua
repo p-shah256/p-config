@@ -63,14 +63,23 @@ vim.api.nvim_create_autocmd("FileType", {
 -- --------------------------------------------------------------------------------
 
 local context_types = {
-	function_definition = true, function_declaration = true,
-	method_definition = true, method_declaration = true,
-	class_definition = true, class_declaration = true,
-	if_statement = true, elif_clause = true, else_clause = true,
-	for_statement = true, for_in_statement = true,
-	while_statement = true, with_statement = true,
-	try_statement = true, except_clause = true,
-	match_statement = true, case_clause = true,
+	function_definition = true,
+	function_declaration = true,
+	method_definition = true,
+	method_declaration = true,
+	class_definition = true,
+	class_declaration = true,
+	if_statement = true,
+	elif_clause = true,
+	else_clause = true,
+	for_statement = true,
+	for_in_statement = true,
+	while_statement = true,
+	with_statement = true,
+	try_statement = true,
+	except_clause = true,
+	match_statement = true,
+	case_clause = true,
 }
 
 local function get_context(node)
@@ -225,6 +234,16 @@ vim.keymap.set("v", "<leader>cp", ":CopyPath<cr>", { desc = "Copy path with line
 -- TODO: same file history with qfixlist
 -- also add dv in :DiffFiles command so insetad of just showing files, it can also show
 -- the changes
+--
+-- ......
+-- 5.6.26
+-- I think this is a good model for sapling workflow
+-- file level --
+-- :Diff <commit>     to show changes to the current file with a commit
+-- :Diff              to show uncommitted
+-- :Diff .            to show committed changes in the current commit
+-- repo level --
+-- :Sapling           to show smartlog and from there you can see the overview of the commit
 local diff_ns = vim.api.nvim_create_namespace("diffs")
 -- returns the shell command to get the base version of a file (overridden in meta.lua for sapling)
 function VCS_DIFF_FILE(file)
@@ -313,33 +332,51 @@ vim.keymap.set("n", "<leader>dv", function()
 	vim.cmd("diffthis | wincmd p")
 end, { desc = "[d]iff [v]iew" })
 
+-- with expr the function’s return value becomes “the keys to execute next”
+-- read more on the docs on why do we need scheudle instead of just calling
+-- it directly?
 vim.keymap.set("n", "[c", function()
+	if vim.wo.diff then
+		return "[c"
+	end
 	local hunks = hunk_cache[vim.api.nvim_get_current_buf()]
 	if not hunks or #hunks == 0 then
-		return
+		return "<Ignore>"
 	end
+	local target = hunks[#hunks][3] + hunks[#hunks][4] - 1
 	for i = #hunks, 1, -1 do
-		if hunks[i][3] + hunks[i][4] - 1 < vim.fn.line(".") then
-			vim.fn.cursor(hunks[i][3] + hunks[i][4] - 1, 1)
-			return
+		local lnum = hunks[i][3] + hunks[i][4] - 1
+		if lnum < vim.fn.line(".") then
+			target = lnum
+			break
 		end
 	end
-	vim.fn.cursor(hunks[#hunks][3] + hunks[#hunks][4] - 1, 1) -- wrap to last
-end, { desc = "Prev change" })
+	vim.schedule(function()
+		vim.fn.cursor(target, 1)
+	end)
+	return "<Ignore>"
+end, { desc = "Prev change", expr = true })
 
 vim.keymap.set("n", "]c", function()
+	if vim.wo.diff then
+		return "]c"
+	end
 	local hunks = hunk_cache[vim.api.nvim_get_current_buf()]
 	if not hunks or #hunks == 0 then
-		return
+		return "<Ignore>"
 	end
+	local target = hunks[1][3]
 	for i = 1, #hunks do
 		if hunks[i][3] > vim.fn.line(".") then
-			vim.fn.cursor(hunks[i][3], 1)
-			return
+			target = hunks[i][3]
+			break
 		end
 	end
-	vim.fn.cursor(hunks[1][3], 1) -- wrap to first
-end, { desc = "Next change" })
+	vim.schedule(function()
+		vim.fn.cursor(target, 1)
+	end)
+	return "<Ignore>"
+end, { desc = "Next change", expr = true })
 
 vim.api.nvim_create_user_command("Diff", function(opts)
 	local function populate_qfix(res)
@@ -385,8 +422,30 @@ local formatters_by_ft = {
 	sh = { vim.fn.expand("~/go/bin/shfmt") },
 	bash = { vim.fn.expand("~/go/bin/shfmt") },
 }
+local inplace_formatters_by_ft = {
+	configerator = { "arc", "f" },
+}
 
 vim.keymap.set("n", "<leader>f", function()
+	-- In-place formatters (modify file directly, then reload)
+	local inplace = inplace_formatters_by_ft[vim.bo.filetype]
+	if inplace and vim.fn.executable(inplace[1]) == 1 then
+		vim.cmd("silent write") -- writes silently
+		-- don't need this as just format what's written (don't create surprise writes)
+		-- but then we loose unwritten changes are formatter will replace the file
+		local cmd = vim.list_extend(vim.list_slice(inplace), { vim.fn.expand("%:p") })
+		vim.system(cmd, {}, function(result)
+			vim.schedule(function()
+				if result.code ~= 0 then
+					vim.notify("Formatter failed: " .. (result.stderr or ""), vim.log.levels.ERROR)
+					return
+				end
+				vim.cmd("silent edit!") -- reloads file silently
+				vim.notify("Formatted with " .. inplace[1])
+			end)
+		end)
+		return
+	end
 	-- Prefer CLI formatter if configured for this filetype
 	local cmd = formatters_by_ft[vim.bo.filetype]
 	if cmd and vim.fn.executable(cmd[1]) == 1 then

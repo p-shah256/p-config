@@ -15,6 +15,8 @@
 ---@field conf SaplingConfig
 ---@field diff_foldexpr fun(lnum: integer): string
 
+-- TODO: add support to include commit message
+--
 ---@type SaplingModule
 local M = {}
 ---@type SaplingConfig
@@ -59,7 +61,7 @@ end
 local function get_or_create_buf(name)
         local existing = vim.fn.bufnr(name)
         if existing ~= -1 then return existing end
-        local buf = vim.api.nvim_create_buf(false, true) -- unlisted, scratch
+        local buf = vim.api.nvim_create_buf(true, true) -- unlisted, scratch
         vim.api.nvim_buf_set_name(buf, name)
         return buf
 end
@@ -122,7 +124,7 @@ local function hash_at_cursor()
 end
 
 -- ASSUMES it will be invoked only on valid fpaths
----@param fpath string
+---@param fpath string path relative to repo root
 local function split_diff_view(fpath)
         local root = find_repo_root()
         ---@return string
@@ -176,10 +178,17 @@ local function split_diff_view(fpath)
         vim.cmd 'vsplit'
         vim.api.nvim_win_set_buf(0, new_buf)
         vim.cmd 'diffthis'
+        vim.keymap.set('n', 'd', '<cmd>tabc<CR>', {
+                desc = 'Close current tab',
+                buffer = 0, -- 0 refers to the current buffer
+                noremap = true,
+                silent = true,
+        })
 end
 
 -- DIFF VIEW — display diff output in *sapling-diff* buffer
--- this is the heart of each diff view
+-- this is the homepage of each commit diff view
+-- TODO: I hate having thse multi level indents, move the keybinds and its logic out and just associate it with this diff instead of multi level nesting
 ---@param output string
 local function display_diff(output)
         if vim.trim(output) == '' then
@@ -216,6 +225,25 @@ local function display_diff(output)
                 end
                 split_diff_view(fpath)
         end, { buffer = buf, silent = true })
+        vim.keymap.set('n', '<CR>', function()
+                local line = vim.api.nvim_get_current_line()
+                ---@type string|nil
+                local fpath = line:match '^diff %-%-git a/.+ b/(.+)'
+                if not fpath then
+                        vim.notify("cursor must be on 'diff --git'", vim.log.levels.WARN)
+                        return
+                end
+                vim.cmd.edit(find_repo_root() .. '/' .. fpath)
+        end, { buffer = buf, silent = true })
+        -- cycle thru changed files / hunks
+        -- "W" = don't wrap around the file
+        -- "b" = search backward
+        local diff_pat = '^diff --git'
+        local hunk_pat = '^@@'
+        vim.keymap.set('n', ']c', function() vim.fn.search(hunk_pat, 'W') end, { buffer = buf, silent = true })
+        vim.keymap.set('n', '[c', function() vim.fn.search(hunk_pat, 'bW') end, { buffer = buf, silent = true })
+        vim.keymap.set('n', ']]', function() vim.fn.search(diff_pat, 'W') end, { buffer = buf, silent = true })
+        vim.keymap.set('n', '[[', function() vim.fn.search(diff_pat, 'bW') end, { buffer = buf, silent = true })
 end
 
 ---@param buf integer
@@ -223,7 +251,7 @@ local function set_keymaps(buf)
         local opts = { buffer = buf, nowait = true, silent = true }
         vim.keymap.set('n', '<CR>', function()
                 local hash = hash_at_cursor()
-                if not hash then return end -- autoformatter fucks this up i like concise
+                if not hash then return end
                 local out, err = run('show', hash, '--git')
                 if err then return end
                 display_diff(out)
@@ -265,12 +293,7 @@ local function set_keymaps(buf)
                 vim.notify(stdout, vim.log.levels.INFO)
                 render_smartlog()
         end, opts)
-        vim.keymap.set('n', 'a', function()
-                local _, err = run 'amend'
-                if err then return end
-                vim.notify('Amended changes to current checkout', vim.log.levels.INFO)
-                render_smartlog()
-        end, opts)
+        vim.keymap.set('n', 'a', function() vim.api.nvim_feedkeys(':!' .. M.conf.exec .. ' amend --edit', 'n', false) end, opts)
         vim.keymap.set('n', 's', function()
                 local hash = hash_at_cursor()
                 if not hash then return end

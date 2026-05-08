@@ -31,12 +31,14 @@ vim.lsp.config["pyrefly"] = {
 }
 vim.lsp.enable("pyrefly")
 
-vim.lsp.config["clangd"] = {
-	cmd = { "clangd" },
-	filetypes = { "c", "cpp" },
-	root_markers = { "compile_commands.json", "compile_flags.txt", ".git" },
-}
-vim.lsp.enable("clangd")
+if not vim.fn.hostname():match("%.facebook%.com$") then
+	vim.lsp.config["clangd"] = {
+		cmd = { "clangd" },
+		filetypes = { "c", "cpp" },
+		root_markers = { "compile_commands.json", "compile_flags.txt", ".git" },
+	}
+	vim.lsp.enable("clangd")
+end
 
 
 -- FORMATTER

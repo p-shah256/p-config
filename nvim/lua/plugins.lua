@@ -1,7 +1,12 @@
 vim.pack.add({
 	"https://github.com/ibhagwan/fzf-lua",
-	"https://github.com/tpope/vim-fugitive"
+	"https://github.com/tpope/vim-fugitive",
+	"https://github.com/akinsho/toggleterm.nvim"
 })
+
+require("toggleterm").setup()
+
+
 local fzf = require("fzf-lua")
 fzf.setup({
 	winopts = {
@@ -22,3 +27,4 @@ vim.keymap.set({ "n", "t" }, "<leader>sh", fzf.helptags, { desc = "[s]earch [h]e
 vim.keymap.set({ "n", "t" }, "<leader>sm", fzf.helptags, { desc = "[s]earch [m]arks" })
 vim.keymap.set({ "n", "t" }, "<leader>sb", fzf.blines, { desc = "[s]earch [b]uffer" })
 vim.keymap.set({ "n", "t" }, "<leader>sr", fzf.resume, { desc = "[s]earch [r]esume" })
+

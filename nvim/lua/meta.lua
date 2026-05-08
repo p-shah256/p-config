@@ -38,6 +38,14 @@ vim.api.nvim_create_user_command('Zbg', function()
                 exec_empty_query = false,
                 cwd = root,
                 previewer = 'builtin',
+                winopts = {
+                        width = 0.95,
+                        height = 0.85,
+                        preview = {
+                                layout = 'vertical',
+                                vertical = 'down:40%',
+                        },
+                },
                 fn_transform = function(line)
                         -- zbgr outputs fbsource/file:line:col:text
                         -- prepend ~/ and strip col to get ~/fbsource/file:line:text
