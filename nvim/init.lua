@@ -1,6 +1,7 @@
 require('options')
 require('keymaps')
 require('lsp')
+require('format')
 require('commands')
 require('plugins')
 require('sapling')

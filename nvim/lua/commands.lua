@@ -244,241 +244,176 @@ vim.keymap.set("v", "<leader>cp", ":CopyPath<cr>", { desc = "Copy path with line
 -- :Diff .            to show committed changes in the current commit
 -- repo level --
 -- :Sapling           to show smartlog and from there you can see the overview of the commit
-local diff_ns = vim.api.nvim_create_namespace("diffs")
--- returns the shell command to get the base version of a file (overridden in meta.lua for sapling)
-function VCS_DIFF_FILE(file)
-	return { "git", "show", "HEAD:" .. vim.fn.fnamemodify(file, ":.") }
-end
-function VCS_HUNKS()
-	return { "git", "diff", "--name-status" }
-end
-
-local hunk_cache = {}
-
-vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost" }, {
-	callback = function(ev)
-		hunk_cache[ev.buf] = {} -- reset and init
-		vim.api.nvim_buf_clear_namespace(ev.buf, diff_ns, 0, -1)
-		if not vim.api.nvim_buf_is_valid(ev.buf) then
-			return
-		end
-		local file = vim.api.nvim_buf_get_name(ev.buf)
-		if file == "" then
-			return
-		end
-		vim.system(
-			VCS_DIFF_FILE(file),
-			{},
-			vim.schedule_wrap(function(r)
-				if r.code ~= 0 or not vim.api.nvim_buf_is_valid(ev.buf) then
-					return
-				end
-				local curr = table.concat(vim.api.nvim_buf_get_lines(ev.buf, 0, -1, false), "\n") .. "\n"
-				for _, h in ipairs(vim.text.diff(r.stdout, curr, { result_type = "indices" })) do
-					local sign = h[2] == 0 and { "+", "DiffAdd" }
-						or h[4] == 0 and { "-", "DiffDelete" }
-						or { "~", "DiffChange" }
-					local from = h[4] == 0 and h[3] or h[3]
-					local to = h[4] == 0 and h[3] or h[3] + h[4] - 1
-					for lnum = from, to do
-						vim.api.nvim_buf_set_extmark(
-							ev.buf,
-							diff_ns,
-							lnum - 1,
-							0,
-							{ sign_text = sign[1], sign_hl_group = sign[2] }
-						)
-					end
-					table.insert(hunk_cache[ev.buf], { h[1], h[2], h[3], h[4] })
-				end
-			end)
-		)
-	end,
-})
-
-vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
-	callback = function(ev)
-		hunk_cache[ev.buf] = nil
-	end,
-})
-
-local diff_buf = nil
-
-vim.keymap.set("n", "<leader>dv", function()
-	if diff_buf and vim.api.nvim_buf_is_valid(diff_buf) then
-		vim.cmd("diffoff!")
-		for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-			if vim.api.nvim_win_get_buf(w) == diff_buf then
-				vim.api.nvim_win_close(w, true)
-			end
-		end
-		vim.api.nvim_buf_delete(diff_buf, { force = true })
-		diff_buf = nil
-		return
-	end
-	local file = vim.api.nvim_buf_get_name(0)
-	local ft = vim.bo.filetype
-	local r = vim.system(VCS_DIFF_FILE(file)):wait()
-	if r.code ~= 0 then
-		return
-	end
-	vim.cmd("diffthis | vsplit")
-	diff_buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_win_set_buf(0, diff_buf)
-	vim.api.nvim_buf_set_lines(diff_buf, 0, -1, false, vim.split(r.stdout, "\n"))
-	vim.bo[diff_buf].filetype = ft
-	vim.bo[diff_buf].buftype = "nofile"
-	vim.bo[diff_buf].modifiable = false
-	vim.cmd("diffthis | wincmd p")
-end, { desc = "[d]iff [v]iew" })
-
--- with expr the function’s return value becomes “the keys to execute next”
--- read more on the docs on why do we need scheudle instead of just calling
--- it directly?
-vim.keymap.set("n", "[c", function()
-	if vim.wo.diff then
-		return "[c"
-	end
-	local hunks = hunk_cache[vim.api.nvim_get_current_buf()]
-	if not hunks or #hunks == 0 then
-		return "<Ignore>"
-	end
-	local target = hunks[#hunks][3] + hunks[#hunks][4] - 1
-	for i = #hunks, 1, -1 do
-		local lnum = hunks[i][3] + hunks[i][4] - 1
-		if lnum < vim.fn.line(".") then
-			target = lnum
-			break
-		end
-	end
-	vim.schedule(function()
-		vim.fn.cursor(target, 1)
-	end)
-	return "<Ignore>"
-end, { desc = "Prev change", expr = true })
-
-vim.keymap.set("n", "]c", function()
-	if vim.wo.diff then
-		return "]c"
-	end
-	local hunks = hunk_cache[vim.api.nvim_get_current_buf()]
-	if not hunks or #hunks == 0 then
-		return "<Ignore>"
-	end
-	local target = hunks[1][3]
-	for i = 1, #hunks do
-		if hunks[i][3] > vim.fn.line(".") then
-			target = hunks[i][3]
-			break
-		end
-	end
-	vim.schedule(function()
-		vim.fn.cursor(target, 1)
-	end)
-	return "<Ignore>"
-end, { desc = "Next change", expr = true })
-
-vim.api.nvim_create_user_command("Diff", function(opts)
-	local function populate_qfix(res)
-		if res.code ~= 0 then
-			return
-		end
-		local items = {}
-		local curr_file = nil
-		for line in res.stdout:gmatch("[^\n]+") do
-			-- + is a magic char so needs escaping
-			local file = line:match("^%+%+%+ ./(.+)$")
-			if file then
-				curr_file = file
-			end
-			-- lua regex is a mess, diff from normal regex
-			local lnum = line:match("^@@ .-%+(%d+)") -- @@ -6,0 +7,1 @@
-			if lnum and curr_file then
-				items[#items + 1] = {
-					filename = curr_file,
-					lnum = tonumber(lnum),
-					text = line,
-				}
-			end
-		end
-		vim.fn.setqflist({}, "r", { title = "VCS Hunks", items = items })
-		vim.cmd("copen | cfirst")
-	end
-	local cmd = VCS_HUNKS()
-	if opts.args ~= "" then
-		cmd[#cmd + 1] = "--change" -- TODO: not sure if this works in git
-		cmd[#cmd + 1] = opts.args
-	end
-	vim.cmd("tabnew")
-	vim.system(cmd, { text = true }, vim.schedule_wrap(populate_qfix))
-end, { nargs = "?" })
--- SIGNIFY end
-
--- --------------------------------------------------------------------------------
--- FORMATTER
--- --------------------------------------------------------------------------------
-local formatters_by_ft = {
-	lua = { "stylua", "-" },
-	sh = { vim.fn.expand("~/go/bin/shfmt") },
-	bash = { vim.fn.expand("~/go/bin/shfmt") },
-}
-local inplace_formatters_by_ft = {
-	configerator = { "arc", "f" },
-}
-
-vim.keymap.set("n", "<leader>f", function()
-	-- In-place formatters (modify file directly, then reload)
-	local inplace = inplace_formatters_by_ft[vim.bo.filetype]
-	if inplace and vim.fn.executable(inplace[1]) == 1 then
-		vim.cmd("silent write") -- writes silently
-		-- don't need this as just format what's written (don't create surprise writes)
-		-- but then we loose unwritten changes are formatter will replace the file
-		local cmd = vim.list_extend(vim.list_slice(inplace), { vim.fn.expand("%:p") })
-		vim.system(cmd, {}, function(result)
-			vim.schedule(function()
-				if result.code ~= 0 then
-					vim.notify("Formatter failed: " .. (result.stderr or ""), vim.log.levels.ERROR)
-					return
-				end
-				vim.cmd("silent edit!") -- reloads file silently
-				vim.notify("Formatted with " .. inplace[1])
-			end)
-		end)
-		return
-	end
-	-- Prefer CLI formatter if configured for this filetype
-	local cmd = formatters_by_ft[vim.bo.filetype]
-	if cmd and vim.fn.executable(cmd[1]) == 1 then
-		local buf = vim.api.nvim_get_current_buf()
-		local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-		local input = table.concat(lines, "\n") .. "\n"
-		vim.system(cmd, { stdin = input }, function(result)
-			vim.schedule(function()
-				if result.code ~= 0 then
-					vim.notify("Formatter failed: " .. (result.stderr or ""), vim.log.levels.ERROR)
-					return
-				end
-				local formatted = vim.split(result.stdout, "\n")
-				if formatted[#formatted] == "" then
-					formatted[#formatted] = nil
-				end
-				vim.api.nvim_buf_set_lines(buf, 0, -1, false, formatted)
-				vim.notify("Formatted with " .. cmd[1]:match("[^/]+$"))
-			end)
-		end)
-		return
-	end
-	-- Fall back to LSP formatting
-	local clients = vim.lsp.get_clients({ bufnr = 0 })
-	for _, client in ipairs(clients) do
-		if client:supports_method("textDocument/formatting") then
-			vim.notify("Formatting with " .. client.name)
-			vim.lsp.buf.format({ async = true, name = client.name })
-			return
-		end
-	end
-	vim.notify("No formatter for " .. vim.bo.filetype, vim.log.levels.WARN)
-end, { desc = "[f]ormat buffer" })
+-- local diff_ns = vim.api.nvim_create_namespace("diffs")
+-- -- returns the shell command to get the base version of a file
+-- -- (overridden in meta.lua for sapling)
+-- function VCS_DIFF_FILE(file)
+-- 	return { "git", "show", "HEAD:" .. vim.fn.fnamemodify(file, ":.") }
+-- end
+-- function VCS_HUNKS()
+-- 	return { "git", "diff", "--name-status" }
+-- end
+--
+-- local hunk_cache = {}
+--
+-- vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost" }, {
+-- 	callback = function(ev)
+-- 		hunk_cache[ev.buf] = {} -- reset and init
+-- 		vim.api.nvim_buf_clear_namespace(ev.buf, diff_ns, 0, -1)
+-- 		if not vim.api.nvim_buf_is_valid(ev.buf) then
+-- 			return
+-- 		end
+-- 		local file = vim.api.nvim_buf_get_name(ev.buf)
+-- 		if file == "" then
+-- 			return
+-- 		end
+-- 		vim.system(
+-- 			VCS_DIFF_FILE(file),
+-- 			{},
+-- 			vim.schedule_wrap(function(r)
+-- 				if r.code ~= 0 or not vim.api.nvim_buf_is_valid(ev.buf) then
+-- 					return
+-- 				end
+-- 				local curr = table.concat(vim.api.nvim_buf_get_lines(ev.buf, 0, -1, false), "\n") .. "\n"
+-- 				for _, h in ipairs(vim.text.diff(r.stdout, curr, { result_type = "indices" })) do
+-- 					local sign = h[2] == 0 and { "+", "DiffAdd" }
+-- 						or h[4] == 0 and { "-", "DiffDelete" }
+-- 						or { "~", "DiffChange" }
+-- 					local from = h[4] == 0 and h[3] or h[3]
+-- 					local to = h[4] == 0 and h[3] or h[3] + h[4] - 1
+-- 					for lnum = from, to do
+-- 						vim.api.nvim_buf_set_extmark(
+-- 							ev.buf,
+-- 							diff_ns,
+-- 							lnum - 1,
+-- 							0,
+-- 							{ sign_text = sign[1], sign_hl_group = sign[2] }
+-- 						)
+-- 					end
+-- 					table.insert(hunk_cache[ev.buf], { h[1], h[2], h[3], h[4] })
+-- 				end
+-- 			end)
+-- 		)
+-- 	end,
+-- })
+--
+-- vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
+-- 	callback = function(ev)
+-- 		hunk_cache[ev.buf] = nil
+-- 	end,
+-- })
+--
+-- local diff_buf = nil
+--
+-- vim.keymap.set("n", "<leader>dv", function()
+-- 	if diff_buf and vim.api.nvim_buf_is_valid(diff_buf) then
+-- 		vim.cmd("diffoff!")
+-- 		for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+-- 			if vim.api.nvim_win_get_buf(w) == diff_buf then
+-- 				vim.api.nvim_win_close(w, true)
+-- 			end
+-- 		end
+-- 		vim.api.nvim_buf_delete(diff_buf, { force = true })
+-- 		diff_buf = nil
+-- 		return
+-- 	end
+-- 	local file = vim.api.nvim_buf_get_name(0)
+-- 	local ft = vim.bo.filetype
+-- 	local r = vim.system(VCS_DIFF_FILE(file)):wait()
+-- 	if r.code ~= 0 then
+-- 		return
+-- 	end
+-- 	vim.cmd("diffthis | vsplit")
+-- 	diff_buf = vim.api.nvim_create_buf(false, true)
+-- 	vim.api.nvim_win_set_buf(0, diff_buf)
+-- 	vim.api.nvim_buf_set_lines(diff_buf, 0, -1, false, vim.split(r.stdout, "\n"))
+-- 	vim.bo[diff_buf].filetype = ft
+-- 	vim.bo[diff_buf].buftype = "nofile"
+-- 	vim.bo[diff_buf].modifiable = false
+-- 	vim.cmd("diffthis | wincmd p")
+-- end, { desc = "[d]iff [v]iew" })
+--
+-- -- with expr the function’s return value becomes “the keys to execute next”
+-- -- read more on the docs on why do we need scheudle instead of just calling
+-- -- it directly?
+-- vim.keymap.set("n", "[c", function()
+-- 	if vim.wo.diff then
+-- 		return "[c"
+-- 	end
+-- 	local hunks = hunk_cache[vim.api.nvim_get_current_buf()]
+-- 	if not hunks or #hunks == 0 then
+-- 		return "<Ignore>"
+-- 	end
+-- 	local target = hunks[#hunks][3] + hunks[#hunks][4] - 1
+-- 	for i = #hunks, 1, -1 do
+-- 		local lnum = hunks[i][3] + hunks[i][4] - 1
+-- 		if lnum < vim.fn.line(".") then
+-- 			target = lnum
+-- 			break
+-- 		end
+-- 	end
+-- 	vim.schedule(function()
+-- 		vim.fn.cursor(target, 1)
+-- 	end)
+-- 	return "<Ignore>"
+-- end, { desc = "Prev change", expr = true })
+--
+-- vim.keymap.set("n", "]c", function()
+-- 	if vim.wo.diff then
+-- 		return "]c"
+-- 	end
+-- 	local hunks = hunk_cache[vim.api.nvim_get_current_buf()]
+-- 	if not hunks or #hunks == 0 then
+-- 		return "<Ignore>"
+-- 	end
+-- 	local target = hunks[1][3]
+-- 	for i = 1, #hunks do
+-- 		if hunks[i][3] > vim.fn.line(".") then
+-- 			target = hunks[i][3]
+-- 			break
+-- 		end
+-- 	end
+-- 	vim.schedule(function()
+-- 		vim.fn.cursor(target, 1)
+-- 	end)
+-- 	return "<Ignore>"
+-- end, { desc = "Next change", expr = true })
+--
+-- vim.api.nvim_create_user_command("Diff", function(opts)
+-- 	local function populate_qfix(res)
+-- 		if res.code ~= 0 then
+-- 			return
+-- 		end
+-- 		local items = {}
+-- 		local curr_file = nil
+-- 		for line in res.stdout:gmatch("[^\n]+") do
+-- 			-- + is a magic char so needs escaping
+-- 			local file = line:match("^%+%+%+ ./(.+)$")
+-- 			if file then
+-- 				curr_file = file
+-- 			end
+-- 			-- lua regex is a mess, diff from normal regex
+-- 			local lnum = line:match("^@@ .-%+(%d+)") -- @@ -6,0 +7,1 @@
+-- 			if lnum and curr_file then
+-- 				items[#items + 1] = {
+-- 					filename = curr_file,
+-- 					lnum = tonumber(lnum),
+-- 					text = line,
+-- 				}
+-- 			end
+-- 		end
+-- 		vim.fn.setqflist({}, "r", { title = "VCS Hunks", items = items })
+-- 		vim.cmd("copen | cfirst")
+-- 	end
+-- 	local cmd = VCS_HUNKS()
+-- 	if opts.args ~= "" then
+-- 		cmd[#cmd + 1] = "--change" -- TODO: not sure if this works in git
+-- 		cmd[#cmd + 1] = opts.args
+-- 	end
+-- 	vim.cmd("tabnew")
+-- 	vim.system(cmd, { text = true }, vim.schedule_wrap(populate_qfix))
+-- end, { nargs = "?" })
+-- -- SIGNIFY end
 
 -- --------------------------------------------------------------------------------
 -- indent guides
