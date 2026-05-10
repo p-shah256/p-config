@@ -244,64 +244,65 @@ vim.keymap.set("v", "<leader>cp", ":CopyPath<cr>", { desc = "Copy path with line
 -- :Diff .            to show committed changes in the current commit
 -- repo level --
 -- :Sapling           to show smartlog and from there you can see the overview of the commit
--- local diff_ns = vim.api.nvim_create_namespace("diffs")
--- -- returns the shell command to get the base version of a file
--- -- (overridden in meta.lua for sapling)
--- function VCS_DIFF_FILE(file)
--- 	return { "git", "show", "HEAD:" .. vim.fn.fnamemodify(file, ":.") }
--- end
--- function VCS_HUNKS()
--- 	return { "git", "diff", "--name-status" }
--- end
---
--- local hunk_cache = {}
---
--- vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost" }, {
--- 	callback = function(ev)
--- 		hunk_cache[ev.buf] = {} -- reset and init
--- 		vim.api.nvim_buf_clear_namespace(ev.buf, diff_ns, 0, -1)
--- 		if not vim.api.nvim_buf_is_valid(ev.buf) then
--- 			return
--- 		end
--- 		local file = vim.api.nvim_buf_get_name(ev.buf)
--- 		if file == "" then
--- 			return
--- 		end
--- 		vim.system(
--- 			VCS_DIFF_FILE(file),
--- 			{},
--- 			vim.schedule_wrap(function(r)
--- 				if r.code ~= 0 or not vim.api.nvim_buf_is_valid(ev.buf) then
--- 					return
--- 				end
--- 				local curr = table.concat(vim.api.nvim_buf_get_lines(ev.buf, 0, -1, false), "\n") .. "\n"
--- 				for _, h in ipairs(vim.text.diff(r.stdout, curr, { result_type = "indices" })) do
--- 					local sign = h[2] == 0 and { "+", "DiffAdd" }
--- 						or h[4] == 0 and { "-", "DiffDelete" }
--- 						or { "~", "DiffChange" }
--- 					local from = h[4] == 0 and h[3] or h[3]
--- 					local to = h[4] == 0 and h[3] or h[3] + h[4] - 1
--- 					for lnum = from, to do
--- 						vim.api.nvim_buf_set_extmark(
--- 							ev.buf,
--- 							diff_ns,
--- 							lnum - 1,
--- 							0,
--- 							{ sign_text = sign[1], sign_hl_group = sign[2] }
--- 						)
--- 					end
--- 					table.insert(hunk_cache[ev.buf], { h[1], h[2], h[3], h[4] })
--- 				end
--- 			end)
--- 		)
--- 	end,
--- })
---
--- vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
--- 	callback = function(ev)
--- 		hunk_cache[ev.buf] = nil
--- 	end,
--- })
+
+local diff_ns = vim.api.nvim_create_namespace("diffs")
+-- returns the shell command to get the base version of a file
+-- (overridden in meta.lua for sapling)
+function VCS_DIFF_FILE(file)
+	return { "git", "show", "HEAD:" .. vim.fn.fnamemodify(file, ":.") }
+end
+function VCS_HUNKS()
+	return { "git", "diff", "--name-status" }
+end
+
+local hunk_cache = {}
+
+vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost" }, {
+	callback = function(ev)
+		hunk_cache[ev.buf] = {} -- reset and init
+		vim.api.nvim_buf_clear_namespace(ev.buf, diff_ns, 0, -1)
+		if not vim.api.nvim_buf_is_valid(ev.buf) then
+			return
+		end
+		local file = vim.api.nvim_buf_get_name(ev.buf)
+		if file == "" then
+			return
+		end
+		vim.system(
+			VCS_DIFF_FILE(file),
+			{},
+			vim.schedule_wrap(function(r)
+				if r.code ~= 0 or not vim.api.nvim_buf_is_valid(ev.buf) then
+					return
+				end
+				local curr = table.concat(vim.api.nvim_buf_get_lines(ev.buf, 0, -1, false), "\n") .. "\n"
+				for _, h in ipairs(vim.text.diff(r.stdout, curr, { result_type = "indices" })) do
+					local sign = h[2] == 0 and { "+", "DiffAdd" }
+						or h[4] == 0 and { "-", "DiffDelete" }
+						or { "~", "DiffChange" }
+					local from = h[4] == 0 and h[3] or h[3]
+					local to = h[4] == 0 and h[3] or h[3] + h[4] - 1
+					for lnum = from, to do
+						vim.api.nvim_buf_set_extmark(
+							ev.buf,
+							diff_ns,
+							lnum - 1,
+							0,
+							{ sign_text = sign[1], sign_hl_group = sign[2] }
+						)
+					end
+					table.insert(hunk_cache[ev.buf], { h[1], h[2], h[3], h[4] })
+				end
+			end)
+		)
+	end,
+})
+
+vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
+	callback = function(ev)
+		hunk_cache[ev.buf] = nil
+	end,
+})
 --
 -- local diff_buf = nil
 --
@@ -333,51 +334,51 @@ vim.keymap.set("v", "<leader>cp", ":CopyPath<cr>", { desc = "Copy path with line
 -- 	vim.cmd("diffthis | wincmd p")
 -- end, { desc = "[d]iff [v]iew" })
 --
--- -- with expr the function’s return value becomes “the keys to execute next”
--- -- read more on the docs on why do we need scheudle instead of just calling
--- -- it directly?
--- vim.keymap.set("n", "[c", function()
--- 	if vim.wo.diff then
--- 		return "[c"
--- 	end
--- 	local hunks = hunk_cache[vim.api.nvim_get_current_buf()]
--- 	if not hunks or #hunks == 0 then
--- 		return "<Ignore>"
--- 	end
--- 	local target = hunks[#hunks][3] + hunks[#hunks][4] - 1
--- 	for i = #hunks, 1, -1 do
--- 		local lnum = hunks[i][3] + hunks[i][4] - 1
--- 		if lnum < vim.fn.line(".") then
--- 			target = lnum
--- 			break
--- 		end
--- 	end
--- 	vim.schedule(function()
--- 		vim.fn.cursor(target, 1)
--- 	end)
--- 	return "<Ignore>"
--- end, { desc = "Prev change", expr = true })
---
--- vim.keymap.set("n", "]c", function()
--- 	if vim.wo.diff then
--- 		return "]c"
--- 	end
--- 	local hunks = hunk_cache[vim.api.nvim_get_current_buf()]
--- 	if not hunks or #hunks == 0 then
--- 		return "<Ignore>"
--- 	end
--- 	local target = hunks[1][3]
--- 	for i = 1, #hunks do
--- 		if hunks[i][3] > vim.fn.line(".") then
--- 			target = hunks[i][3]
--- 			break
--- 		end
--- 	end
--- 	vim.schedule(function()
--- 		vim.fn.cursor(target, 1)
--- 	end)
--- 	return "<Ignore>"
--- end, { desc = "Next change", expr = true })
+-- with expr the function’s return value becomes “the keys to execute next”
+-- read more on the docs on why do we need scheudle instead of just calling
+-- it directly?
+vim.keymap.set("n", "[c", function()
+	if vim.wo.diff then
+		return "[c"
+	end
+	local hunks = hunk_cache[vim.api.nvim_get_current_buf()]
+	if not hunks or #hunks == 0 then
+		return "<Ignore>"
+	end
+	local target = hunks[#hunks][3] + hunks[#hunks][4] - 1
+	for i = #hunks, 1, -1 do
+		local lnum = hunks[i][3] + hunks[i][4] - 1
+		if lnum < vim.fn.line(".") then
+			target = lnum
+			break
+		end
+	end
+	vim.schedule(function()
+		vim.fn.cursor(target, 1)
+	end)
+	return "<Ignore>"
+end, { desc = "Prev change", expr = true })
+
+vim.keymap.set("n", "]c", function()
+	if vim.wo.diff then
+		return "]c"
+	end
+	local hunks = hunk_cache[vim.api.nvim_get_current_buf()]
+	if not hunks or #hunks == 0 then
+		return "<Ignore>"
+	end
+	local target = hunks[1][3]
+	for i = 1, #hunks do
+		if hunks[i][3] > vim.fn.line(".") then
+			target = hunks[i][3]
+			break
+		end
+	end
+	vim.schedule(function()
+		vim.fn.cursor(target, 1)
+	end)
+	return "<Ignore>"
+end, { desc = "Next change", expr = true })
 --
 -- vim.api.nvim_create_user_command("Diff", function(opts)
 -- 	local function populate_qfix(res)
@@ -413,7 +414,8 @@ vim.keymap.set("v", "<leader>cp", ":CopyPath<cr>", { desc = "Copy path with line
 -- 	vim.cmd("tabnew")
 -- 	vim.system(cmd, { text = true }, vim.schedule_wrap(populate_qfix))
 -- end, { nargs = "?" })
--- -- SIGNIFY end
+
+-- SIGNIFY end
 
 -- --------------------------------------------------------------------------------
 -- indent guides

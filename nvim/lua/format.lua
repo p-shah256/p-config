@@ -10,6 +10,7 @@ M.fmt_ft = {
 -- In-place formatters (modify file directly, then reload)
 M.inplace_fmt_ft = {
 	-- configerator = { "arc", "f" },
+	python = { "ruff", "format" },
 }
 
 -- NEOVIM:
