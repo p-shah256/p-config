@@ -1,10 +1,11 @@
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
+# if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+#   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+# fi
 
+eval "$(starship init zsh)"
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 
@@ -15,17 +16,13 @@ export ZSH="$HOME/.oh-my-zsh"
 # load a random theme each time Oh My Zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-ZSH_THEME="powerlevel10k/powerlevel10k"
-POWERLEVEL9K_DISABLE_GITSTATUS=true
-POWERLEVEL10K_DISABLE_GITSTATUS=true
+# ZSH_THEME="powerlevel10k/powerlevel10k"
+# POWERLEVEL9K_DISABLE_GITSTATUS=true
+# POWERLEVEL10K_DISABLE_GITSTATUS=true
 export BAT_THEME="GitHub"
 
 # Load Meta-specific configuration if it exists
 [ -f ~/.zshrc.meta ] && source ~/.zshrc.meta
-
-phead() {
-    echo -e "\n\n\033[1;36m=== $* ===\033[0m"
-}
 
 # Set list of themes to pick from when loading at random
 # Setting this variable when ZSH_THEME=random will cause zsh to load
@@ -109,7 +106,7 @@ bindkey -v
 # Enable editing command line in editor
 autoload -U edit-command-line
 zle -N edit-command-line
-bindkey -M viins '^x^e' edit-command-line  # Ctrl+X Ctrl+E in insert mode
+# bindkey -M viins '^x^e' edit-command-line  # Ctrl+X Ctrl+E in insert mode
 bindkey -M vicmd 'V' edit-command-line     # V in normal mode
 bindkey -M vicmd 'v' visual-mode           # v enters visual mode
 
@@ -131,11 +128,11 @@ alias ls='eza --icons --group-directories-first'
 
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+# [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+# [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 
 # Load atuin into PATH before using it
-. "$HOME/.atuin/bin/env"
+# . "$HOME/.atuin/bin/env"
 
 eval "$(atuin init zsh)"

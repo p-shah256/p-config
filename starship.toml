@@ -1,0 +1,26 @@
+# Minimal starship config (working)
+format = "$character"
+right_format = "$directory$cmd_duration$time"
+
+# [username]
+# show_always = true
+# style_user = "bold green"
+# style_root = "bold red"
+# format = " [$user]($style) "
+
+[directory]
+truncation_length = 8
+
+[character]
+success_symbol = '[➜](bold green) '
+error_symbol = '[✗](bold red) '
+
+[cmd_duration]
+min_time = 500
+format = '[$duration](bold yellow) '
+
+[time]
+disabled = false
+time_format = '%y-%m-%d %H:%M:%S'
+format = "[$time]($style) "
+use_12hr = true
