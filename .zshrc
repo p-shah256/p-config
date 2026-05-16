@@ -135,8 +135,6 @@ alias ls='eza --icons --group-directories-first'
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 
-source <(navi widget zsh)
-
 # Load atuin into PATH before using it
 . "$HOME/.atuin/bin/env"
 
