@@ -33,3 +33,10 @@ vim.lsp.config["clangd"] = {
 	root_markers = { "compile_commands.json", "compile_flags.txt", ".git" },
 }
 vim.lsp.enable("clangd")
+
+vim.lsp.config["superhtml"] = {
+	cmd = { "superhtml", "lsp" },
+	filetypes = { "html" },
+	root_markers = { ".git" },
+}
+vim.lsp.enable("superhtml")

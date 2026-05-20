@@ -1,3 +1,4 @@
+-- TODO: need to add folds support for cpp, maybe just embed the treesitter files along with your config?
 -- --------------------------------------------------------------------------------
 -- TREESITTER
 -- --------------------------------------------------------------------------------
@@ -196,12 +197,32 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI", "BufLeave" }, {
 -- so instead of doing that, vim.o.autocomplete supports omnicomplete, where we can route
 -- lsp completions into thru omnifunc alongside completion sources
 -- the only (current) limitation is there is no way to gurantee lsp completions get the first few seats before anything else.
+
+-- --------------------------------------------------------------------------------
+-- LSP COMPLETIONS
+-- --------------------------------------------------------------------------------
+-- vim.lsp.completion.enable only triggers for triggerCharacters. if we would want to trigger it for all chars
+-- then we can add to the triggerCharacters as follows
+--   local chars = vim.split('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_', '')
+--   local caps = client.server_capabilities or {}
+--   local provider = caps.completionProvider or {}
+--   local existing = provider.triggerCharacters or {}
+--   for _, c in ipairs(chars) do existing[#existing + 1] = c end
+--   provider.triggerCharacters = existing
+-- we would also need to disable vim.o.autocomplete (triggers automatically) as they would both race to show their popups.
+-- so instead of doing that, vim.o.autocomplete supports omnicomplete, where we can route
+-- lsp completions into thru omnifunc alongside completion sources
+-- the only (current) limitation is there is no way to gurantee lsp completions get the first few seats before anything else.
 vim.api.nvim_create_autocmd("LspAttach", {
 	callback = function(ev)
 		local client = vim.lsp.get_client_by_id(ev.data.client_id)
 		if client ~= nil and client:supports_method("textDocument/completion") then
-			-- vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true })
 			vim.bo[ev.buf].complete = "o^10,.^5,w^3"
+			-- ftplugin/c.vim sets omnifunc=ccomplete#Complete after LspAttach fires, clobbering the lsp omnifunc.
+			-- vim.schedule defers the assignment to the next event loop tick, after all ftplugin loading is done.
+			vim.schedule(function()
+				vim.bo[ev.buf].omnifunc = "v:lua.vim.lsp.omnifunc"
+			end)
 		end
 	end,
 })
@@ -420,13 +441,20 @@ end, { desc = "Next change", expr = true })
 -- --------------------------------------------------------------------------------
 -- indent guides
 -- --------------------------------------------------------------------------------
+local function detect_indent()
+	local lines = vim.api.nvim_buf_get_lines(0, 0, 100, false)
+	for _, line in ipairs(lines) do
+		local spaces = line:match("^( +)")
+		if spaces then
+			return #spaces -- first indented line tells us the indent size
+		end
+	end
+	return vim.bo.shiftwidth -- fallback to setting
+end
+
 local function update_leadmultispace()
-	local sw = vim.bo.shiftwidth
+	local sw = detect_indent()
 	if sw > 1 then
 		vim.opt_local.listchars:append({ leadmultispace = "▏" .. string.rep(" ", sw - 1) })
 	end
 end
-vim.api.nvim_create_autocmd({ "BufEnter", "OptionSet" }, {
-	pattern = { "*", "shiftwidth" },
-	callback = update_leadmultispace,
-})
