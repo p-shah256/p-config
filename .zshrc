@@ -5,7 +5,6 @@
 #   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 # fi
 
-eval "$(starship init zsh)"
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 
@@ -136,3 +135,4 @@ alias ls='eza --icons --group-directories-first'
 # . "$HOME/.atuin/bin/env"
 
 eval "$(atuin init zsh)"
+eval "$(starship init zsh)"
