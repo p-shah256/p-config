@@ -1,5 +1,5 @@
 # Minimal starship config (working)
-format = "$character"
+format = "$character$hostname"
 right_format = "$directory$cmd_duration$time"
 
 # [username]
@@ -12,7 +12,7 @@ right_format = "$directory$cmd_duration$time"
 truncation_length = 8
 
 [character]
-success_symbol = '[➜](bold green) '
+# success_symbol = '[➜](bold green) '
 error_symbol = '[✗](bold red) '
 
 [cmd_duration]
@@ -24,3 +24,8 @@ disabled = false
 time_format = '%y-%m-%d %H:%M:%S'
 format = "[$time]($style) "
 use_12hr = true
+
+[hostname]
+ssh_only = true
+format = '[$ssh_symbol](bold blue) on [$hostname](bold red) '
+disabled = false
