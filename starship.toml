@@ -1,6 +1,10 @@
 # Minimal starship config (working)
-format = "$character"
-right_format = "$directory$cmd_duration$time$hostname"
+# format = "$character"
+# right_format = "$directory$cmd_duration$time$hostname"
+format = '''
+$directory$cmd_duration$time$hostname
+$character
+'''
 
 # [username]
 # show_always = true
@@ -12,8 +16,9 @@ right_format = "$directory$cmd_duration$time$hostname"
 truncation_length = 8
 
 [character]
-# success_symbol = '[➜](bold green) '
-error_symbol = '[✗](bold red) '
+success_symbol = '[>](bold green)'
+error_symbol = '[x](bold red)'
+vimcmd_symbol = '[<](bold green)'
 
 [cmd_duration]
 min_time = 500
