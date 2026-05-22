@@ -248,24 +248,6 @@ vim.keymap.set("v", "<leader>cp", ":CopyPath<cr>", { desc = "Copy path with line
 -- --------------------------------------------------------------------------------
 -- SIGNIFY: GUTTER SIGNS + DIFF VIEW
 -- --------------------------------------------------------------------------------
--- TODO: instaed of a gutter,
--- just chanage the color of the line number to show a change?
--- like it can be red for deletions, and green for additions, blue for changes
---
--- TODO: same file history with qfixlist
--- also add dv in :DiffFiles command so insetad of just showing files, it can also show
--- the changes
---
--- ......
--- 5.6.26
--- I think this is a good model for sapling workflow
--- file level --
--- :Diff <commit>     to show changes to the current file with a commit
--- :Diff              to show uncommitted
--- :Diff .            to show committed changes in the current commit
--- repo level --
--- :Sapling           to show smartlog and from there you can see the overview of the commit
-
 local diff_ns = vim.api.nvim_create_namespace("diffs")
 -- returns the shell command to get the base version of a file
 -- (overridden in meta.lua for sapling)
@@ -324,37 +306,7 @@ vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
 		hunk_cache[ev.buf] = nil
 	end,
 })
---
--- local diff_buf = nil
---
--- vim.keymap.set("n", "<leader>dv", function()
--- 	if diff_buf and vim.api.nvim_buf_is_valid(diff_buf) then
--- 		vim.cmd("diffoff!")
--- 		for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
--- 			if vim.api.nvim_win_get_buf(w) == diff_buf then
--- 				vim.api.nvim_win_close(w, true)
--- 			end
--- 		end
--- 		vim.api.nvim_buf_delete(diff_buf, { force = true })
--- 		diff_buf = nil
--- 		return
--- 	end
--- 	local file = vim.api.nvim_buf_get_name(0)
--- 	local ft = vim.bo.filetype
--- 	local r = vim.system(VCS_DIFF_FILE(file)):wait()
--- 	if r.code ~= 0 then
--- 		return
--- 	end
--- 	vim.cmd("diffthis | vsplit")
--- 	diff_buf = vim.api.nvim_create_buf(false, true)
--- 	vim.api.nvim_win_set_buf(0, diff_buf)
--- 	vim.api.nvim_buf_set_lines(diff_buf, 0, -1, false, vim.split(r.stdout, "\n"))
--- 	vim.bo[diff_buf].filetype = ft
--- 	vim.bo[diff_buf].buftype = "nofile"
--- 	vim.bo[diff_buf].modifiable = false
--- 	vim.cmd("diffthis | wincmd p")
--- end, { desc = "[d]iff [v]iew" })
---
+
 -- with expr the function’s return value becomes “the keys to execute next”
 -- read more on the docs on why do we need scheudle instead of just calling
 -- it directly?
@@ -400,42 +352,6 @@ vim.keymap.set("n", "]c", function()
 	end)
 	return "<Ignore>"
 end, { desc = "Next change", expr = true })
---
--- vim.api.nvim_create_user_command("Diff", function(opts)
--- 	local function populate_qfix(res)
--- 		if res.code ~= 0 then
--- 			return
--- 		end
--- 		local items = {}
--- 		local curr_file = nil
--- 		for line in res.stdout:gmatch("[^\n]+") do
--- 			-- + is a magic char so needs escaping
--- 			local file = line:match("^%+%+%+ ./(.+)$")
--- 			if file then
--- 				curr_file = file
--- 			end
--- 			-- lua regex is a mess, diff from normal regex
--- 			local lnum = line:match("^@@ .-%+(%d+)") -- @@ -6,0 +7,1 @@
--- 			if lnum and curr_file then
--- 				items[#items + 1] = {
--- 					filename = curr_file,
--- 					lnum = tonumber(lnum),
--- 					text = line,
--- 				}
--- 			end
--- 		end
--- 		vim.fn.setqflist({}, "r", { title = "VCS Hunks", items = items })
--- 		vim.cmd("copen | cfirst")
--- 	end
--- 	local cmd = VCS_HUNKS()
--- 	if opts.args ~= "" then
--- 		cmd[#cmd + 1] = "--change" -- TODO: not sure if this works in git
--- 		cmd[#cmd + 1] = opts.args
--- 	end
--- 	vim.cmd("tabnew")
--- 	vim.system(cmd, { text = true }, vim.schedule_wrap(populate_qfix))
--- end, { nargs = "?" })
-
 -- SIGNIFY end
 
 -- --------------------------------------------------------------------------------
