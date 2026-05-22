@@ -5,68 +5,29 @@ if root == "" then
 	return
 end
 
-vim.api.nvim_create_user_command("Myles", function()
-	local fzf = require("fzf-lua")
-	fzf.fzf_live(function(query)
-		if type(query) == "table" then
-			query = query[1] or ""
-		end
-		if query == "" then
-			return ""
-		end
-		return "myles --list -n 50 " .. vim.fn.shellescape(query)
-	end, {
-		prompt = "Myles> ",
-		exec_empty_query = false,
-		cwd = root,
-		actions = fzf.defaults.actions.files,
-		previewer = "builtin",
-		winopts = {
-			width = 0.95,
-			height = 0.85,
-			preview = {
-				layout = "vertical",
-				vertical = "down:40%",
-			},
-		},
-	})
-end, {})
-vim.keymap.set("n", "<leader>sf", "<cmd>Myles<cr>", { desc = "Search files (myles)" })
+vim.api.nvim_create_user_command("Qf", function(opts)
+	local cmd = opts.args
+	local lines = vim.fn.systemlist(cmd)
 
-vim.api.nvim_create_user_command("Zbg", function()
-	local fzf = require("fzf-lua")
-	fzf.fzf_live(function(query)
-		if type(query) == "table" then
-			query = query[1] or ""
+	if cmd:match("^myles%s") then
+		local items = {}
+		for _, line in ipairs(lines) do
+			if line ~= "" then
+				table.insert(items, { filename = root .. "/" .. line })
+			end
 		end
-		if query == "" then
-			return ""
+		vim.fn.setqflist({}, "r", { title = cmd, items = items })
+	else
+		for i, line in ipairs(lines) do
+			lines[i] = line:gsub("^fbsource/", root .. "/")
 		end
-		return "zbgr " .. query
-	end, {
-		prompt = "ZBGR> ",
-		exec_empty_query = false,
-		cwd = root,
-		previewer = "builtin",
-		winopts = {
-			width = 0.95,
-			height = 0.85,
-			preview = {
-				layout = "vertical",
-				vertical = "down:40%",
-			},
-		},
-		fn_transform = function(line)
-			-- zbgr outputs fbsource/file:line:col:text
-			-- prepend ~/ and strip col to get ~/fbsource/file:line:text
-			local transformed = "~/" .. line
-			transformed = transformed:gsub("^([^:]+:%d+):%d+:", "%1:")
-			return fzf.make_entry.file(transformed, { file_icons = false })
-		end,
-		actions = fzf.defaults.actions.files,
-	})
-end, {})
-vim.keymap.set("n", "<leader>sg", "<cmd>Zbg<cr>", { desc = "[s]earch [g]rep" })
+		vim.fn.setqflist({}, "r", { title = cmd, lines = lines, efm = "%f:%l:%c:%m,%f:%l:%m" })
+	end
+	vim.cmd("botright copen")
+end, { nargs = "+" })
+
+vim.keymap.set("n", "<leader>sf", ":Qf myles --list -n 50 ", { desc = "Search files (myles)" })
+vim.keymap.set("n", "<leader>sg", ":Qf zbgr ", { desc = "[s]earch [g]rep" })
 -- TODO: in visual mode, just sg for the selected part
 
 -- TODO: eventually we would like to remove this plugin?
@@ -86,15 +47,18 @@ vim.lsp.enable({
 	"hhvm", -- Hack
 	"linttool@meta", -- Linting and formatting
 })
--- function VCS_DIFF_FILE(file)
--- 	return { "sl", "cat", "-r", ".^", file }
--- end
--- function VCS_DIFF_FILES()
--- 	return { "sl", "status" }
--- end
--- function VCS_HUNKS()
--- 	return { "sl", "diff", "-U0" } -- adding '--change .' would give committed changes
--- end
+function VCS_DIFF_FILE(file)
+	-- insert mode: diff against working-copy parent (uncommitted changes only)
+	-- normal mode: diff against parent commit (committed + uncommitted)
+	local rev = vim.api.nvim_get_mode().mode:sub(1, 1) == "i" and "." or ".^"
+	return { "sl", "cat", "-r", rev, file }
+end
+function VCS_DIFF_FILES()
+	return { "sl", "status" }
+end
+function VCS_HUNKS()
+	return { "sl", "diff", "-U0" } -- adding '--change .' would give committed changes
+end
 
 -- configerator shouls use python parsers, decorators, folds, etc
 vim.treesitter.language.register("python", "configerator")
