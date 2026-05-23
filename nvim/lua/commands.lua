@@ -358,14 +358,18 @@ end, { desc = "Next change", expr = true })
 -- indent guides
 -- --------------------------------------------------------------------------------
 local function detect_indent()
-	local lines = vim.api.nvim_buf_get_lines(0, 0, 100, false)
+	local lines = vim.api.nvim_buf_get_lines(0, 0, 200, false)
+	local min_indent = nil
 	for _, line in ipairs(lines) do
-		local spaces = line:match("^( +)")
+		local spaces = line:match("^( +)%S")
 		if spaces then
-			return #spaces -- first indented line tells us the indent size
+			local n = #spaces
+			if not min_indent or n < min_indent then
+				min_indent = n
+			end
 		end
 	end
-	return vim.bo.shiftwidth -- fallback to setting
+	return min_indent or vim.bo.shiftwidth
 end
 
 local function update_leadmultispace()
@@ -374,3 +378,8 @@ local function update_leadmultispace()
 		vim.opt_local.listchars:append({ leadmultispace = "▏" .. string.rep(" ", sw - 1) })
 	end
 end
+
+vim.api.nvim_create_autocmd({ "BufWinEnter", "FileType" }, {
+	group = vim.api.nvim_create_augroup("IndentGuides", { clear = true }),
+	callback = update_leadmultispace,
+})
