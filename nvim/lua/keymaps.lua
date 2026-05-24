@@ -61,3 +61,51 @@ vim.keymap.set("n", "*", function()
 	vim.cmd("keepjumps normal! mi*`i")
 end, { desc = "Search word under cursor without jumping", noremap = true, silent = true })
 
+-- -------------------------------------------------------------------------------
+-- you can do without fzf lua, sxample:
+-- -------------------------------------------------------------------------------
+-- vim.keymap.set("n", "<leader>sg", function()
+-- 	local query = vim.fn.input("Grep > ")
+-- 	if query ~= "" then
+-- 		vim.cmd("silent grep! " .. query)
+-- 		vim.cmd("cwindow")
+-- 	end
+-- end)
+--
+-- -- this is not fuzzy
+-- vim.keymap.set("n", "<leader>sf", function()
+-- 	local result = vim.fn.systemlist("rg --files")
+-- 	if #result > 0 then
+-- 		vim.cmd("edit " .. vim.fn.fnameescape(result[1]))
+-- 	end
+-- end)
+--
+-- with preview
+-- vim.keymap.set("n", "<leader>sf", function()
+--     local tmpfile = vim.fn.tempname()
+--     vim.cmd("botright 15new")
+--     vim.fn.termopen("rg --files | fzf > " .. tmpfile, {
+--         on_exit = function()
+--             vim.cmd("bdelete!")
+--             local result = vim.fn.readfile(tmpfile)
+--             if #result > 0 then
+--                 vim.cmd("edit " .. vim.fn.fnameescape(result[1]))
+--             end
+--         end
+--     })
+--     vim.cmd("startinsert")
+-- end)
+-- vim.keymap.set("n", "<leader>sf", function()
+--     local tmpfile = vim.fn.tempname()
+--     vim.cmd("botright 20new")
+--     vim.fn.termopen("rg --files | fzf --preview 'bat --color=always {}' > " .. tmpfile, {
+--         on_exit = function()
+--             vim.cmd("bdelete!")
+--             local result = vim.fn.readfile(tmpfile)
+--             if #result > 0 then
+--                 vim.cmd("edit " .. vim.fn.fnameescape(result[1]))
+--             end
+--         end
+--     })
+--     vim.cmd("startinsert")
+-- end)

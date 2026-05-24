@@ -185,29 +185,25 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI", "BufLeave" }, {
 -- --------------------------------------------------------------------------------
 -- LSP COMPLETIONS
 -- --------------------------------------------------------------------------------
--- vim.lsp.completion.enable only triggers for triggerCharacters. if we would want to trigger it for all chars
--- then we can add to the triggerCharacters as follows
---   local chars = vim.split('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_', '')
---   local caps = client.server_capabilities or {}
---   local provider = caps.completionProvider or {}
---   local existing = provider.triggerCharacters or {}
---   for _, c in ipairs(chars) do existing[#existing + 1] = c end
---   provider.triggerCharacters = existing
--- we would also need to disable vim.o.autocomplete (triggers automatically) as they would both race to show their popups.
--- so instead of doing that, vim.o.autocomplete supports omnicomplete, where we can route
--- lsp completions into thru omnifunc alongside completion sources
--- the only (current) limitation is there is no way to gurantee lsp completions get the first few seats before anything else.
 vim.api.nvim_create_autocmd("LspAttach", {
 	callback = function(ev)
 		local client = vim.lsp.get_client_by_id(ev.data.client_id)
 		if client ~= nil and client:supports_method("textDocument/completion") then
-			-- Use the native LSP completion pipeline (nvim 0.11+) instead of routing
-			-- through omnifunc, so incremental requests and autotrigger work correctly.
+			-- expand triggerCharacters to include all alphanumeric + underscore
+			-- so clangd fires on every keypress, not just . -> ::
+			local chars = vim.split("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", "")
+			local caps = client.server_capabilities or {}
+			local provider = caps.completionProvider or {}
+			local existing = provider.triggerCharacters or {}
+			for _, c in ipairs(chars) do
+				existing[#existing + 1] = c
+			end
+			provider.triggerCharacters = existing
 			vim.lsp.completion.enable(true, client.id, ev.buf, {
 				autotrigger = true,
 			})
-			-- ftplugin/c.vim sets omnifunc=ccomplete#Complete after LspAttach fires, clobbering the lsp omnifunc.
-			-- vim.schedule defers the assignment to the next event loop tick, after all ftplugin loading is done.
+			-- stop nvim from mixing in buffer words before clangd fires
+			vim.bo[ev.buf].complete = ""
 			vim.schedule(function()
 				vim.bo[ev.buf].omnifunc = "v:lua.vim.lsp.omnifunc"
 			end)
