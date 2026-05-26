@@ -383,6 +383,26 @@ local function set_ssl_keymaps(buf)
         end, 'jf submit (prefilled)')
 end
 
+vim.api.nvim_create_user_command('SaplingHistory', function()
+        local file = vim.api.nvim_buf_get_name(0)
+        if file == '' then
+                vim.notify('No file in current buffer', vim.log.levels.WARN)
+                return
+        end
+        local out, err = run(
+                'log',
+                '-T',
+                'o  {node|short}  {date|isodate}  {user|email}  D{phabdiff}  {desc|firstline}\n',
+                '--',
+                file
+        )
+        if err then return end
+        local buf = get_or_create_buf '*sapling-history*'
+        fill_buf(buf, vim.split(out, '\n', { plain = true }))
+        set_ssl_keymaps(buf)
+        vim.cmd('buffer ' .. buf)
+end, { desc = 'Sapling history for current file' })
+
 vim.api.nvim_create_user_command('Sapling', function()
         local buf = render_smartlog()
         if not buf then return end
