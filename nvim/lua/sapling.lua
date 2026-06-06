@@ -33,15 +33,16 @@ local DIFF_BUF = '*sapling-commit*'
 -- HELPERS
 -- ──────────────────────────────────────────────────────────────────
 
+---@param start string|nil  directory to start walking from (defaults to cwd)
 ---@return string
-local function find_repo_root()
-        -- Walk up from cwd looking for a .sl directory
-        local dir = vim.fn.getcwd()
+local function find_repo_root(start)
+        -- Walk up from `start` looking for a .sl directory
+        local dir = start or vim.fn.getcwd()
         while dir ~= '/' do
                 if vim.fn.isdirectory(dir .. '/.sl') == 1 then return dir end
                 dir = vim.fn.fnamemodify(dir, ':h')
         end
-        return vim.fn.getcwd()
+        return start or vim.fn.getcwd()
 end
 
 -- runs the sapling subcommand, with some goodies like notify and err handling

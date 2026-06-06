@@ -33,6 +33,10 @@ vim.opt.listchars = {
 -- vim.o.pumborder = 'rounded'
 vim.opt.fixendofline = false
 vim.o.foldtext = ""
+vim.opt.shada = "!,'1000,<50,s10,h"
 
-
-
+-- nvim 0.12 + Ghostty + tmux: pasted newlines arrive as ^[[27;5;106~.
+-- Disable kitty keyboard protocol and modifyOtherKeys on UI enter.
+vim.api.nvim_create_autocmd("UIEnter", {
+  callback = function() io.stdout:write("\27[<u\27[>4;0m") end,
+})
