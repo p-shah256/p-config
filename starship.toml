@@ -2,7 +2,7 @@
 # format = "$character"
 # right_format = "$directory$cmd_duration$time$hostname"
 format = '''
-$directory$cmd_duration$time$hostname
+$directory$cmd_duration$time$hostname$kubernetes$status
 $character
 '''
 
@@ -34,3 +34,13 @@ use_12hr = true
 ssh_only = true
 format = 'on [$hostname](bold red) '
 disabled = false
+
+[kubernetes]
+format = '[$context(\($namespace\))](dimmed green) '
+disabled = false
+detect_env_vars = ['KUBECONFIG']
+
+[status]
+format = '[$int](bold yellow) '
+disabled = false
+pipestatus = true

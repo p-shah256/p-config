@@ -27,7 +27,6 @@ vim.cmd('packadd! nvim.undotree')
 vim.opt.list = true
 vim.opt.listchars = {
 	tab = "▏ ",
-	leadmultispace = "▏ ",
 	trail = "·"
 }
 -- vim.o.pumborder = 'rounded'
