@@ -40,3 +40,22 @@ vim.lsp.config["superhtml"] = {
 	root_markers = { ".git" },
 }
 vim.lsp.enable("superhtml")
+
+vim.lsp.config["rust_analyzer"] = {
+	cmd = { "rust-analyzer" },
+	filetypes = { "rust" },
+	root_markers = { { "Cargo.toml" }, ".git" },
+	settings = {
+		["rust-analyzer"] = {
+			imports = {
+				granularity = { group = "module", },
+				prefix = "self",
+			},
+			cargo = { buildScripts = { enable = true, }, },
+			procMacro = { enable = true, },
+			checkOnSave = true,
+			check = { command = "clippy", },
+		},
+	},
+}
+vim.lsp.enable("rust_analyzer")
