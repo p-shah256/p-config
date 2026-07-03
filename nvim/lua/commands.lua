@@ -83,19 +83,30 @@ local context_types = {
         case_clause = true,
 }
 
+local function fmt(node, line)
+        local t = node:type()
+        if t:find "function" or t:find "method" then -- functions/methods: keep up to the first '(' , drop the arg list
+                return (line:gsub("%s*%(.*$", "(..)"))
+        end
+        return (line:gsub("%s*[{:]%s*$", "")) -- control structures: keep the line up to its opening brace/colon
+end
+
 local function get_context(node)
         local parts = {}
         while node do
                 if context_types[node:type()] then
                         local line = vim.api.nvim_buf_get_lines(0, node:start(), node:start() + 1, false)[1]
-                        table.insert(parts, 1, vim.trim(line))
+                        local seg = fmt(node, vim.trim(line))
+                        -- skip duplicates; C++ parses "else if" as two nested nodes starting on same physical line
+                        -- ts fetches and displays that same line's text twice when traversing the syntax tree
+                        if seg ~= "" and seg ~= parts[1] then table.insert(parts, 1, seg) end
                 end
                 node = node:parent()
         end
-        return table.concat(parts, " > ")
+        return table.concat(parts, "  ›  ")
 end
 
-vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI", "WinScrolled" }, {
         callback = function(ev)
                 if vim.api.nvim_buf_line_count(ev.buf) > 5000 then return end
                 local node = vim.treesitter.get_node()
@@ -103,9 +114,6 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
                         vim.wo.winbar = ""
                         return
                 end
-                -- winbar value is parsed as a statusline format string: '%' starts a
-                -- format spec, so unescaped '%' in source code triggers E539. Escape
-                -- '%' -> '%%' and strip control chars.
                 local ctx = get_context(node):gsub("%c", " "):gsub("%%", "%%%%")
                 vim.wo.winbar = ctx
         end,
