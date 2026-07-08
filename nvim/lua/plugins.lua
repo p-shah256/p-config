@@ -18,7 +18,7 @@ vim.keymap.set({ "n", "t" }, "<leader><leader>", fzf.buffers, { desc = "Find in 
 vim.keymap.set({ "n", "t" }, "<leader>sf", fzf.files, { desc = "Find in open buffers" })
 vim.keymap.set({ "n", "t" }, "<leader>sk", fzf.keymaps, { desc = "[s]earch [k]eymaps" })
 vim.keymap.set({ "n", "t" }, "<leader>s.", function()
-	fzf.oldfiles({ cwd_only = true })
+	fzf.oldfiles({ cwd_only = true, include_current_session = true })
 end, { desc = "[s]earch [o]ld files (cwd)" })
 vim.keymap.set({ "n", "t" }, "<leader>sg", fzf.grep, { desc = "[s]earch [g]rep" })
 vim.keymap.set({ "n", "t" }, "<leader>sj", fzf.jumps, { desc = "[s]earch [j]umps" })
