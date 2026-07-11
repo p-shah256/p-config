@@ -1,10 +1,7 @@
 vim.pack.add {
         "https://github.com/ibhagwan/fzf-lua",
         "https://github.com/tpope/vim-fugitive",
-        "https://github.com/akinsho/toggleterm.nvim",
 }
-
-require("toggleterm").setup()
 
 local fzf = require "fzf-lua"
 fzf.setup {
