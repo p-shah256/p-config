@@ -39,7 +39,7 @@ vim.api.nvim_create_user_command("Qf", function(opts)
 end, { nargs = "+" })
 
 vim.keymap.set("n", "<leader>sf", ":Qf myles --list -n 50 ", { desc = "Search files (myles)" })
-vim.keymap.set("n", "<leader>sg", ":Qf zbgr ", { desc = "[s]earch [g]rep" })
+vim.keymap.set("n", "<leader>sg", ":Qf zbgr --exclude \"www|test|json|\\.php$|\\.md$|\\.pyi$\" ", { desc = "[s]earch [g]rep" })
 -- TODO: in visual mode, just sg for the selected part
 
 -- TODO: eventually we would like to remove this plugin?
