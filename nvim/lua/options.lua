@@ -1,16 +1,16 @@
-vim.g.mapleader = ' '
-vim.g.maplocalleader = ' '
+vim.g.mapleader = " "
+vim.g.maplocalleader = " "
 vim.g.have_nerd_font = true
 vim.o.number = true
 vim.o.relativenumber = true
-vim.o.mouse = 'a'
+vim.o.mouse = "a"
 vim.o.undofile = true -- persists it after you close the buffer
 vim.o.ignorecase = true -- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
 vim.o.smartcase = true
 vim.o.cursorline = true
 vim.o.confirm = true
-vim.o.inccommand = 'split' -- Preview substitutions live, as you type!
-vim.o.clipboard = 'unnamedplus' -- Use OSC 52 for clipboard (works over SSH)
+vim.o.inccommand = "split" -- Preview substitutions live, as you type!
+vim.o.clipboard = "unnamedplus" -- Use OSC 52 for clipboard (works over SSH)
 vim.o.termguicolors = true
 vim.o.updatetime = 300
 -- vim.o.autocomplete only supports 'complete' sources (buffer keywords, etc.)
@@ -20,15 +20,16 @@ vim.o.updatetime = 300
 vim.o.autocomplete = true -- default is true for all
 vim.o.completeopt = "menu,menuone,popup,noselect"
 vim.o.pumheight = 10
-vim.opt.foldmethod = 'expr' -- Enable Tree-sitter folding globally
-vim.opt.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+vim.opt.foldmethod = "expr" -- Enable Tree-sitter folding globally
+vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
 vim.opt.foldlevel = 99 -- Keep folds open by default
-vim.cmd('packadd! nvim.undotree')
+vim.cmd("packadd! nvim.undotree")
 vim.opt.list = true
 vim.opt.listchars = {
-	tab = "▏ ",
-	trail = "·"
+        tab = "▏ ",
+        trail = "·",
 }
+vim.cmd.colorscheme("retrobox")
 -- vim.o.pumborder = 'rounded'
 vim.opt.fixendofline = false
 vim.o.foldtext = ""
@@ -37,5 +38,5 @@ vim.opt.shada = "!,'1000,<50,s10,h"
 -- nvim 0.12 + Ghostty + tmux: pasted newlines arrive as ^[[27;5;106~.
 -- Disable kitty keyboard protocol and modifyOtherKeys on UI enter.
 vim.api.nvim_create_autocmd("UIEnter", {
-  callback = function() io.stdout:write("\27[<u\27[>4;0m") end,
+        callback = function() io.stdout:write("\27[<u\27[>4;0m") end,
 })

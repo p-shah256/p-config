@@ -8,7 +8,7 @@
 -- cp -r nvim-treesitter/runtime/queries ~/.local/share/nvim/site/
 -- if there is a parser version mismatch then use this command TSBuild! <language>
 local function install_ts_parser(name, url, force)
-        local parser_dir = vim.fn.stdpath "data" .. "/site/parser"
+        local parser_dir = vim.fn.stdpath("data") .. "/site/parser"
         vim.fn.mkdir(parser_dir, "p")
         local so_path = parser_dir .. "/" .. name .. ".so"
         if vim.uv.fs_stat(so_path) and not force then
@@ -41,7 +41,7 @@ local function install_ts_parser(name, url, force)
         -- copy query files (highlights.scm, etc.) if they exist
         local queries_src = tmp_path .. "/queries"
         if vim.uv.fs_stat(queries_src) then
-                local queries_dst = vim.fn.stdpath "data" .. "/site/queries/" .. name
+                local queries_dst = vim.fn.stdpath("data") .. "/site/queries/" .. name
                 vim.fn.mkdir(queries_dst, "p")
                 os.execute("cp " .. queries_src .. "/*.scm " .. queries_dst .. "/")
                 print(name .. " queries installed to " .. queries_dst)
@@ -85,7 +85,7 @@ local context_types = {
 
 local function fmt(node, line)
         local t = node:type()
-        if t:find "function" or t:find "method" then -- functions/methods: keep up to the first '(' , drop the arg list
+        if t:find("function") or t:find("method") then -- functions/methods: keep up to the first '(' , drop the arg list
                 return (line:gsub("%s*%(.*$", "(..)"))
         end
         return (line:gsub("%s*[{:]%s*$", "")) -- control structures: keep the line up to its opening brace/colon
@@ -122,7 +122,7 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI", "WinScrolled" }, {
 -- --------------------------------------------------------------------------------
 -- ILLUMINATE
 -- --------------------------------------------------------------------------------
-local ns_id = vim.api.nvim_create_namespace "illuminate"
+local ns_id = vim.api.nvim_create_namespace("illuminate")
 
 vim.api.nvim_set_hl(0, "illuminate", { underline = true })
 
@@ -134,7 +134,7 @@ end
 local function highlight(bufnr)
         clear(bufnr)
         -- if lsp supports
-        local clients = vim.lsp.get_clients { bufnr = 0 }
+        local clients = vim.lsp.get_clients({ bufnr = 0 })
         for _, client in ipairs(clients) do
                 if client:supports_method("textDocument/documentHighlight", bufnr) then
                         vim.lsp.buf.document_highlight()
@@ -178,24 +178,22 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI", "BufLeave" }, {
 vim.api.nvim_create_autocmd("LspAttach", {
         callback = function(ev)
                 local client = vim.lsp.get_client_by_id(ev.data.client_id)
-                if client ~= nil and client:supports_method "textDocument/completion" then
-                        -- expand triggerCharacters to include all alphanumeric + underscore
-                        -- so clangd fires on every keypress, not just . -> ::
-                        local chars = vim.split("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", "")
-                        local caps = client.server_capabilities or {}
-                        local provider = caps.completionProvider or {}
-                        local existing = provider.triggerCharacters or {}
-                        for _, c in ipairs(chars) do
-                                existing[#existing + 1] = c
-                        end
-                        provider.triggerCharacters = existing
+                if client ~= nil and client:supports_method("textDocument/completion") then
                         vim.lsp.completion.enable(true, client.id, ev.buf, {
-                                autotrigger = true,
+                                autotrigger = true, -- real server trigger chars like ., ->, ::
                         })
-                        -- stop nvim from mixing in buffer words before clangd fires
+                        -- stop nvim from mixing in buffer words before LSP fires
                         vim.bo[ev.buf].complete = ""
                         vim.schedule(function() vim.bo[ev.buf].omnifunc = "v:lua.vim.lsp.omnifunc" end)
                 end
+        end,
+})
+
+-- Constant autocomplete without lying to the server about triggerCharacters.
+-- This sends triggerKind=Invoked instead of triggerKind=TriggerCharacter.
+vim.api.nvim_create_autocmd("TextChangedI", {
+        callback = function()
+                if vim.fn.pumvisible() == 0 then vim.lsp.completion.get() end
         end,
 })
 
@@ -203,7 +201,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 -- COPY PATH
 -- --------------------------------------------------------------------------------
 vim.api.nvim_create_user_command("CopyPath", function(opts)
-        local path = vim.fn.expand "%:p"
+        local path = vim.fn.expand("%:p")
         if opts.range > 0 then
                 if opts.line1 == opts.line2 then
                         path = path .. ":" .. opts.line1
@@ -218,9 +216,9 @@ vim.keymap.set("n", "<leader>cp", "<cmd>CopyPath<cr>", { desc = "Copy path" })
 vim.keymap.set("v", "<leader>cp", ":CopyPath<cr>", { desc = "Copy path with lines" })
 
 -- --------------------------------------------------------------------------------
--- SIGNIFY: GUTTER SIGNS + DIFF VIEW
+-- SIGNIFY: GUTTER SIGNS
 -- --------------------------------------------------------------------------------
-local diff_ns = vim.api.nvim_create_namespace "diffs"
+local diff_ns = vim.api.nvim_create_namespace("diffs")
 -- returns the shell command to get the base version of a file
 -- (overridden in meta.lua for sapling)
 function VCS_DIFF_FILE(file) return { "git", "show", "HEAD:" .. vim.fn.fnamemodify(file, ":.") } end
@@ -269,7 +267,7 @@ vim.keymap.set("n", "[c", function()
         local target = hunks[#hunks][3] + hunks[#hunks][4] - 1
         for i = #hunks, 1, -1 do
                 local lnum = hunks[i][3] + hunks[i][4] - 1
-                if lnum < vim.fn.line "." then
+                if lnum < vim.fn.line(".") then
                         target = lnum
                         break
                 end
@@ -284,7 +282,7 @@ vim.keymap.set("n", "]c", function()
         if not hunks or #hunks == 0 then return "<Ignore>" end
         local target = hunks[1][3]
         for i = 1, #hunks do
-                if hunks[i][3] > vim.fn.line "." then
+                if hunks[i][3] > vim.fn.line(".") then
                         target = hunks[i][3]
                         break
                 end
@@ -313,7 +311,7 @@ local function update_leadmultispace()
                 local lines = vim.api.nvim_buf_get_lines(0, 0, 200, false)
                 local min_indent = nil
                 for _, line in ipairs(lines) do
-                        local spaces = line:match "^( +)%S"
+                        local spaces = line:match("^( +)%S")
                         if spaces then
                                 local n = #spaces
                                 if (not min_indent) or (n < min_indent) then min_indent = n end
