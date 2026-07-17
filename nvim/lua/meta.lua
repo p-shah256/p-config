@@ -13,6 +13,12 @@ local function current_sl_root() return vim.fn.systemlist("sl root 2>/dev/null")
 -- --------------------------------------------------------------------------------
 -- FINDERS with QFLIST
 -- --------------------------------------------------------------------------------
+-- this is great no plugin usage, the only problem is it pollutes old files list
+--    Qf populates quickfix.
+--    Quickfix creates hidden buffers for every filename.
+--    fzf-lua oldfiles/picker sees named buffers from current session.
+--    Those quickfix ghost buffers now look like recent/old files.
+-- we could do some extra work to avoid it
 vim.api.nvim_create_user_command("Qf", function(opts)
         local cmd = opts.args
         local lines = vim.fn.systemlist(cmd)
@@ -32,9 +38,18 @@ vim.api.nvim_create_user_command("Qf", function(opts)
         end
         vim.cmd("botright copen")
 end, { nargs = "+" })
+-- vim.keymap.set("n", "<leader>sf", ":Qf myles --list -n 50 ", { desc = "Search files (myles)" })
+-- vim.keymap.set("n", "<leader>sg", ':Qf zbgr --exclude "www|test|json|\\.php$|\\.md$|\\.pyi$" ', { desc = "[s]earch [g]rep" })
 
-vim.keymap.set("n", "<leader>sf", ":Qf myles --list -n 50 ", { desc = "Search files (myles)" })
-vim.keymap.set("n", "<leader>sg", ':Qf zbgr --exclude "www|test|json|\\.php$|\\.md$|\\.pyi$" ', { desc = "[s]earch [g]rep" })
+vim.api.nvim_create_user_command("Bg", function(opts)
+        require("fzf-lua").grep({
+                raw_cmd = opts.args, -- raw_cmd, NOT cmd → no input box
+                cwd = vim.fn.expand("~"),
+                winopts = { preview = { layout = "vertical", vertical = "down:45%" } },
+        })
+end, { nargs = "+" })
+vim.keymap.set("n", "<leader>sg", [[:Bg zbgr -i --exclude "www|test|json|\.php$|\.md$|\.pyi$" ]], { desc = "Search grep" })
+vim.keymap.set("n", "<leader>sf", [[:Bg zbgf -i ]], { desc = "Search files (myles)" })
 -- TODO: in visual mode, just sg for the selected part
 
 -- --------------------------------------------------------------------------------
