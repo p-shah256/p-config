@@ -3,13 +3,6 @@
 local root = vim.fn.systemlist("sl root 2>/dev/null")[1] or ""
 if root == "" then return end
 
-local home = vim.fn.expand("~")
-local qf_efm = "%f|%l col %c|%m,%f:%l:%c:%m,%f:%l:%m"
-
-local function join(dir, path) return path:sub(1, 1) == "/" and path or dir .. "/" .. path end
-
-local function current_sl_root() return vim.fn.systemlist("sl root 2>/dev/null")[1] or vim.fn.getcwd() end
-
 -- --------------------------------------------------------------------------------
 -- FINDERS with QFLIST
 -- --------------------------------------------------------------------------------
@@ -19,25 +12,32 @@ local function current_sl_root() return vim.fn.systemlist("sl root 2>/dev/null")
 --    fzf-lua oldfiles/picker sees named buffers from current session.
 --    Those quickfix ghost buffers now look like recent/old files.
 -- we could do some extra work to avoid it
-vim.api.nvim_create_user_command("Qf", function(opts)
-        local cmd = opts.args
-        local lines = vim.fn.systemlist(cmd)
-
-        if cmd:match("^myles%s") then
-                local items = {}
-                local search_root = current_sl_root()
-                for _, line in ipairs(lines) do
-                        if line ~= "" then table.insert(items, { filename = join(search_root, line) }) end
-                end
-                vim.fn.setqflist({}, "r", { title = cmd, items = items })
-        else
-                for i, line in ipairs(lines) do
-                        lines[i] = line:gsub("^([^/|:][^|:]*)", home .. "/%1", 1)
-                end
-                vim.fn.setqflist({}, "r", { title = cmd, lines = lines, efm = qf_efm })
-        end
-        vim.cmd("botright copen")
-end, { nargs = "+" })
+-- local home = vim.fn.expand("~")
+-- local qf_efm = "%f|%l col %c|%m,%f:%l:%c:%m,%f:%l:%m"
+--
+-- local function join(dir, path) return path:sub(1, 1) == "/" and path or dir .. "/" .. path end
+--
+-- local function current_sl_root() return vim.fn.systemlist("sl root 2>/dev/null")[1] or vim.fn.getcwd() end
+--
+-- vim.api.nvim_create_user_command("Qf", function(opts)
+--         local cmd = opts.args
+--         local lines = vim.fn.systemlist(cmd)
+--
+--         if cmd:match("^myles%s") then
+--                 local items = {}
+--                 local search_root = current_sl_root()
+--                 for _, line in ipairs(lines) do
+--                         if line ~= "" then table.insert(items, { filename = join(search_root, line) }) end
+--                 end
+--                 vim.fn.setqflist({}, "r", { title = cmd, items = items })
+--         else
+--                 for i, line in ipairs(lines) do
+--                         lines[i] = line:gsub("^([^/|:][^|:]*)", home .. "/%1", 1)
+--                 end
+--                 vim.fn.setqflist({}, "r", { title = cmd, lines = lines, efm = qf_efm })
+--         end
+--         vim.cmd("botright copen")
+-- end, { nargs = "+" })
 -- vim.keymap.set("n", "<leader>sf", ":Qf myles --list -n 50 ", { desc = "Search files (myles)" })
 -- vim.keymap.set("n", "<leader>sg", ':Qf zbgr --exclude "www|test|json|\\.php$|\\.md$|\\.pyi$" ', { desc = "[s]earch [g]rep" })
 
@@ -59,10 +59,10 @@ vim.keymap.set("n", "<leader>sf", [[:Bg zbgf -i ]], { desc = "Search files (myle
 vim.pack.add({ "https://github.com/neovim/nvim-lspconfig" })
 vim.opt.rtp:prepend("/usr/share/fb-editor-support/nvim")
 vim.lsp.enable({
-        -- 'pyrefly',            -- Pyrefly type checker
+        "pyrefly@meta", -- Pyrefly type checker
         "rust-analyzer@meta", -- Rust - Run :RustAnalyzerReload on TARGETS changes
-        "fb-pyright-ls@meta", -- Python
-        "pyre@meta", -- Python type checking
+        -- "fb-pyright-ls@meta", -- Python
+        -- "pyre@meta", -- Python type checking
         "thriftlsp@meta", -- Thrift
         "cppls@meta", -- C++
         -- "buckls@meta", -- Buck (disabled: sends boolean diagnosticProvider, crashes nvim 0.12 vim/lsp/diagnostic.lua:396)
@@ -71,7 +71,34 @@ vim.lsp.enable({
         "flow@meta", -- JavaScript/Flow
         "hhvm", -- Hack
         "linttool@meta", -- Linting and formatting
+        "ids@meta",
 })
+
+-- TypeScript: use the vendored server in fbsource (npm installs are blocked on devvm)
+local ts_cli = vim.fn.expand("~") .. "/fbsource/fbcode/jest_e2e/framework/node_modules/typescript-language-server/lib/cli.mjs"
+if vim.fn.filereadable(ts_cli) == 1 then
+        vim.lsp.config["ts_ls"] = {
+                cmd = { "node", ts_cli, "--stdio" },
+                filetypes = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
+                root_markers = { "tsconfig.json", "jsconfig.json", "package.json", ".git" },
+        }
+        vim.lsp.enable("ts_ls")
+end
+
+-- disable native integrations to avoid both being turned on
+vim.lsp.enable("clangd", false)
+vim.lsp.enable("pyrefly", false)
+vim.lsp.enable("rust_analyzer", false)
+
+-- --------------------------------------------------------------------------------
+-- LSP IGNORES
+-- --------------------------------------------------------------------------------
+-- meta's clangd or cppls issues
+local notify_once = vim.notify_once
+vim.notify_once = function(msg, level, opts)
+        if type(msg) == "string" and msg:match("^cppls@meta: %-32603 Error thrown from handling the auto completion response") then return end
+        return notify_once(msg, level, opts)
+end
 
 -- --------------------------------------------------------------------------------
 -- GIT GUTTER INTEGRATIONS
@@ -118,16 +145,6 @@ vim.keymap.set("n", "<leader>ch", "<cmd>CodeHub<cr>", { desc = "Copy CodeHub url
 vim.keymap.set("v", "<leader>ch", ":CodeHub<cr>", { desc = "Copy CodeHub url with lines" })
 
 -- --------------------------------------------------------------------------------
--- LSP IGNORES
--- --------------------------------------------------------------------------------
--- meta's clangd or cppls issues
-local notify_once = vim.notify_once
-vim.notify_once = function(msg, level, opts)
-        if type(msg) == "string" and msg:match("^cppls@meta: %-32603 Error thrown from handling the auto completion response") then return end
-        return notify_once(msg, level, opts)
-end
-
--- --------------------------------------------------------------------------------
 -- EXTRAS
 -- --------------------------------------------------------------------------------
 -- Configerator/CINC is Python-like; use Python parser/decorators/folds/etc.
@@ -144,4 +161,10 @@ vim.api.nvim_create_autocmd("FileType", {
 -- overrides
 local fmt = require("format")
 fmt.inplace_fmt_ft.configerator = { "arc", "f" }
-vim.lsp.enable("clangd", false)
+
+-- --------------------------------------------------------------------------------
+-- meta's internal packages
+-- --------------------------------------------------------------------------------
+-- inline blame off by default
+require("meta.hg").setup({ line_blame = { enable = false } })
+require("meta.buck").setup()

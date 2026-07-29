@@ -356,5 +356,3 @@ return M
 -- support commit messages
 -- -----------------------
 -- would have to wire the buffer with sl commands
---
---
