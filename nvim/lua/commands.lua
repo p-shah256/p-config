@@ -221,12 +221,12 @@ vim.keymap.set("v", "<leader>cp", ":CopyPath<cr>", { desc = "Copy path with line
 local diff_ns = vim.api.nvim_create_namespace("diffs")
 -- returns the shell command to get the base version of a file
 -- (overridden in meta.lua for sapling)
-function VCS_DIFF_FILE(file) return { "git", "show", "HEAD:" .. vim.fn.fnamemodify(file, ":.") } end
+function VCS_DIFF_FILE(file, event) return { "git", "show", "HEAD:" .. vim.fn.fnamemodify(file, ":.") } end
 function VCS_HUNKS() return { "git", "diff", "--name-status" } end
 
 local hunk_cache = {}
 
-vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost" }, {
+vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost", "InsertEnter", "InsertLeave" }, {
         callback = function(ev)
                 hunk_cache[ev.buf] = {} -- reset and init
                 vim.api.nvim_buf_clear_namespace(ev.buf, diff_ns, 0, -1)
@@ -234,7 +234,7 @@ vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost" }, {
                 local file = vim.api.nvim_buf_get_name(ev.buf)
                 if file == "" then return end
                 vim.system(
-                        VCS_DIFF_FILE(file),
+                        VCS_DIFF_FILE(file, ev.event),
                         {},
                         vim.schedule_wrap(function(r)
                                 if r.code ~= 0 or not vim.api.nvim_buf_is_valid(ev.buf) then return end

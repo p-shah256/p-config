@@ -103,13 +103,15 @@ end
 -- --------------------------------------------------------------------------------
 -- GIT GUTTER INTEGRATIONS
 -- --------------------------------------------------------------------------------
-function VCS_DIFF_FILE(file)
+function VCS_DIFF_FILE(file, event)
         -- insert mode: diff against working-copy parent (uncommitted changes only)
         -- normal mode: diff against parent commit (committed + uncommitted)
-        local rev = vim.api.nvim_get_mode().mode:sub(1, 1) == "i" and "." or ".^"
+        local rev = event == "InsertEnter" and "." or ".^"
         return { "sl", "cat", "-r", rev, file }
 end
+-- this looks unused??
 function VCS_DIFF_FILES() return { "sl", "status" } end
+-- same for this one
 function VCS_HUNKS()
         return { "sl", "diff", "-U0" } -- adding '--change .' would give committed changes
 end
