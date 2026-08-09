@@ -216,41 +216,6 @@ local function open_commit(hash)
         })
 end
 
--- Edit a new or existing commit message; writing the buffer performs the operation.
-local function open_message_editor(hash)
-        local original = hash and sl("log", "-r", hash, "-T", "{desc}", "--limit", "1") or sl("debugcommitmessage")
-        if not original then return end
-
-        local required_diff_line = original:match("Differential Revision:[^\n]+")
-        open_view({
-                name = "sapling-message://" .. (hash or "new"),
-                text = original,
-                editable = true,
-                filetype = "gitcommit",
-                on_write = function(lines)
-                        local message = table.concat(lines, "\n")
-                        if required_diff_line and not message:find("Differential Revision:", 1, true) then
-                                vim.notify("Differential Revision line must be preserved", vim.log.levels.ERROR)
-                                return false
-                        end
-
-                        local logfile = vim.fn.tempname()
-                        vim.fn.writefile(lines, logfile)
-                        local output = hash and sl("amend", "--to", hash, "--logfile", logfile) or sl("commit", "--logfile", logfile)
-                        vim.fn.delete(logfile)
-                        if output == nil then return false end
-
-                        vim.notify(hash and "Commit amended" or "Commit created", vim.log.levels.INFO)
-                        vim.schedule(function() vim.cmd.Sapling() end)
-                        return true
-                end,
-                mappings = {
-                        { "<C-s>", "<cmd>write<CR>", "Sapling: save commit message" },
-                        { "q", "<cmd>confirm bdelete<CR>", "Sapling: close message" },
-                },
-        })
-end
-
 -- Show the smartlog and expose stack operations on the selected commit.
 local function open_smartlog()
         local smartlog = sl("ssl", "--color=always")
@@ -270,6 +235,11 @@ local function open_smartlog()
         end
         assert(curr_line and graph_prefix, "Could not find the current commit in smartlog")
         -- 2. get and build the working copy if any
+        -- this is really superficial, ideally we should deal with it as follows:
+        --     hit 'a' on modified file, amend it to commit below
+        --     return on M, open it
+        --     d/D on a modified file, create a diff/split view
+        -- basically instead of just showing, make it usable
         local status = sl("status", "--color=always")
         local working = { graph_prefix .. "\27[1;33m@@ Working Copy\27[0m" }
         if status and vim.trim(status) ~= "" then
@@ -343,19 +313,6 @@ local function open_smartlog()
                                         end
                                 end,
                                 "Sapling: pull",
-                        },
-                        {
-                                "a",
-                                function()
-                                        local hash = hash_at_cursor()
-                                        if hash then open_message_editor(hash) end
-                                end,
-                                "Sapling: amend changes and commit message",
-                        },
-                        {
-                                "c",
-                                function() open_message_editor(nil) end,
-                                "Sapling: commit working changes",
                         },
                         {
                                 "s",
