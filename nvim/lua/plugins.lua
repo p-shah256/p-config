@@ -1,7 +1,17 @@
 vim.pack.add({
         "https://github.com/ibhagwan/fzf-lua",
         "https://github.com/tpope/vim-fugitive",
+        "https://github.com/nvim-orgmode/orgmode",
 })
+
+require("orgmode").setup({
+           org_agenda_files = {
+                   "~/Desktop/p-notes/meta-plan.org",
+                   "~/Desktop/p-notes/bookmarks.org",
+           },
+           org_default_notes_file = "~/Desktop/p-notes/refile.org",
+})
+vim.lsp.enable('org') -- Experimental LSP support
 
 local fzf = require("fzf-lua")
 fzf.setup({
