@@ -1,4 +1,10 @@
 -- TODO: need to add folds support for cpp, maybe just embed the treesitter files along with your config?
+local function sh(cmd, err_msg)
+        local out = vim.fn.system(cmd)
+        if vim.v.shell_error ~= 0 then return false, print(err_msg .. ": " .. out) end
+        return true, out
+end
+
 -- --------------------------------------------------------------------------------
 -- TREESITTER
 -- --------------------------------------------------------------------------------
@@ -7,52 +13,75 @@
 -- cd $(mktemp -d) && git clone git@github.com:nvim-treesitter/nvim-treesitter.git
 -- cp -r nvim-treesitter/runtime/queries ~/.local/share/nvim/site/
 -- if there is a parser version mismatch then use this command TSBuild! <language>
-local function install_ts_parser(name, url, force)
-        local parser_dir = vim.fn.stdpath("data") .. "/site/parser"
-        vim.fn.mkdir(parser_dir, "p")
-        local so_path = parser_dir .. "/" .. name .. ".so"
-        if vim.uv.fs_stat(so_path) and not force then
-                print(name .. " is already installed, skipping. Use :TSBuild! to force.")
-                return
-        end
+local function install_ts_parser(name, url, branch, force)
+        local so_path = vim.fn.stdpath("data") .. "/site/parser/" .. name .. ".so"
+        if vim.uv.fs_stat(so_path) and not force then return print(name .. " already installed. Use :TSBuild! to force.") end
+
         local tmp_path = "/tmp/treesitter/" .. name
-        os.execute("rm -rf " .. tmp_path)
-        local output = vim.fn.system("git clone --depth 1 " .. url .. " " .. tmp_path .. " 2>&1")
-        if vim.v.shell_error ~= 0 then
-                print("clone failed: " .. output)
-                return
-        end
+        local b_flag = (branch and branch ~= "") and ("-b " .. branch .. " ") or ""
+        os.execute("rm -rf " .. tmp_path) -- clear in advance
+        if not sh(string.format("git clone --depth 1 %s%s %s 2>&1", b_flag, url, tmp_path), "clone failed") then return end
+
         local src = tmp_path .. "/src"
-        local files = src .. "/parser.c"
-        if vim.uv.fs_stat(src .. "/scanner.c") then -- if parser has c scanner
-                files = files .. " " .. src .. "/scanner.c"
-        end
-        local cc = "gcc" -- some parsers have a C++ scanner
-        if vim.uv.fs_stat(src .. "/scanner.cc") then
-                files = files .. " " .. src .. "/scanner.cc"
-                cc = "g++"
-        end
-        local cmd = string.format("%s -o %s -I%s %s -shared -fPIC -O2", cc, so_path, src, files)
-        if os.execute(cmd) ~= 0 then
-                print("Failed to compile " .. name)
-        else
-                print(name .. " installed to " .. so_path)
-        end
-        -- copy query files (highlights.scm, etc.) if they exist
-        local queries_src = tmp_path .. "/queries"
-        if vim.uv.fs_stat(queries_src) then
-                local queries_dst = vim.fn.stdpath("data") .. "/site/queries/" .. name
-                vim.fn.mkdir(queries_dst, "p")
-                os.execute("cp " .. queries_src .. "/*.scm " .. queries_dst .. "/")
-                print(name .. " queries installed to " .. queries_dst)
-        end
-        os.execute("rm -rf " .. tmp_path)
+        local scanner = vim.uv.fs_stat(src .. "/scanner.cc") and (src .. "/scanner.cc") or (vim.uv.fs_stat(src .. "/scanner.c") and (src .. "/scanner.c") or "")
+        local cc = scanner:match("%.cc$") and "g++" or "gcc"
+
+        if not sh(string.format("%s -o %s -I%s %s/parser.c %s -shared -fPIC -O2", cc, so_path, src, src, scanner), "compile failed") then return end
+        print(name .. " installed to " .. so_path)
 end
+
+-- NOTE: this is old pattern overly verbose, once we have validated new one works reliably,
+-- remove it
+--
+-- local function install_ts_parser(name, url, branch, force)
+--         local parser_dir = vim.fn.stdpath("data") .. "/site/parser"
+--         vim.fn.mkdir(parser_dir, "p")
+--         local so_path = parser_dir .. "/" .. name .. ".so"
+--         if vim.uv.fs_stat(so_path) and not force then
+--                 print(name .. " is already installed, skipping. Use :TSBuild! to force.")
+--                 return
+--         end
+--         local tmp_path = "/tmp/treesitter/" .. name
+--         os.execute("rm -rf " .. tmp_path)
+--
+--         -- If branch is provided, add '-b <branch>' to git clone
+--         local branch_flag = (branch and branch ~= "") and ("-b " .. branch .. " ") or ""
+--         local output = vim.fn.system(string.format("git clone --depth 1 %s%s %s 2>&1", branch_flag, url, tmp_path))
+--         if vim.v.shell_error ~= 0 then
+--                 print("clone failed: " .. output)
+--                 return
+--         end
+--         local src = tmp_path .. "/src"
+--         local files = src .. "/parser.c"
+--         if vim.uv.fs_stat(src .. "/scanner.c") then -- if parser has c scanner
+--                 files = files .. " " .. src .. "/scanner.c"
+--         end
+--         local cc = "gcc" -- some parsers have a C++ scanner
+--         if vim.uv.fs_stat(src .. "/scanner.cc") then
+--                 files = files .. " " .. src .. "/scanner.cc"
+--                 cc = "g++"
+--         end
+--         local cmd = string.format("%s -o %s -I%s %s -shared -fPIC -O2", cc, so_path, src, files)
+--         if os.execute(cmd) ~= 0 then
+--                 print("Failed to compile " .. name)
+--         else
+--                 print(name .. " installed to " .. so_path)
+--         end
+--         -- copy query files (highlights.scm, etc.) if they exist
+--         local queries_src = tmp_path .. "/queries"
+--         if vim.uv.fs_stat(queries_src) then
+--                 local queries_dst = vim.fn.stdpath("data") .. "/site/queries/" .. name
+--                 vim.fn.mkdir(queries_dst, "p")
+--                 os.execute("cp " .. queries_src .. "/*.scm " .. queries_dst .. "/")
+--                 print(name .. " queries installed to " .. queries_dst)
+--         end
+--         os.execute("rm -rf " .. tmp_path)
+-- end
 
 vim.api.nvim_create_user_command(
         "TSBuild",
-        function(opts) install_ts_parser(opts.args, "git@github.com:tree-sitter/tree-sitter-" .. opts.args .. ".git", opts.bang) end,
-        { nargs = 1, bang = true }
+        function(opts) install_ts_parser(opts.fargs[1], opts.fargs[2], opts.fargs[3], opts.bang) end,
+        { nargs = "+", bang = true }
 )
 
 vim.api.nvim_create_autocmd("FileType", {
