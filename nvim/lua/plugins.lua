@@ -5,13 +5,20 @@ vim.pack.add({
 })
 
 require("orgmode").setup({
-           org_agenda_files = {
-                   "~/Desktop/p-notes/meta-plan.org",
-                   "~/Desktop/p-notes/bookmarks.org",
-           },
-           org_default_notes_file = "~/Desktop/p-notes/refile.org",
+        org_agenda_files = {
+                "~/Desktop/p-notes/meta-plan.org",
+                "~/Desktop/p-notes/bookmarks.org",
+        },
+        org_default_notes_file = "~/Desktop/p-notes/refile.org",
+        org_startup_folded = 'showeverything', 
+        mappings = {
+                org = {
+                        org_previous_visible_heading = false,
+                        org_next_visible_heading = false,
+                },
+        },
 })
-vim.lsp.enable('org') -- Experimental LSP support
+vim.lsp.enable("org") -- Experimental LSP support
 
 local fzf = require("fzf-lua")
 fzf.setup({
