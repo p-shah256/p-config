@@ -61,6 +61,10 @@ vim.keymap.set("n", "*", function()
 	vim.cmd("keepjumps normal! mi*`i")
 end, { desc = "Search word under cursor without jumping", noremap = true, silent = true })
 
+-- Tab navigation
+vim.keymap.set("n", "H", "<cmd>tabprev<CR>", { desc = "Previous tab", silent = true })
+vim.keymap.set("n", "L", "<cmd>tabnext<CR>", { desc = "Next tab", silent = true })
+
 -- -------------------------------------------------------------------------------
 -- you can do without fzf lua, sxample:
 -- -------------------------------------------------------------------------------
